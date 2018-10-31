@@ -4,11 +4,11 @@
 
 #include "parameters.h"
 
-void REF_MMult(int, int, int, double *, int, double *, int, double *, int );
-void MY_MMult(int, int, int, double *, int, double *, int, double *, int );
-void copy_matrix(int, int, double *, int, double *, int );
-void random_matrix(int, int, double *, int);
-double compare_matrices( int, int, double *, int, double *, int );
+void REF_MMult(int, int, int, float *, int, float *, int, float *, int );
+void MY_MMult(int, int, int, float *, int, float *, int, float *, int );
+void copy_matrix(int, int, float *, int, float *, int );
+void random_matrix(int, int, float *, int);
+float compare_matrices( int, int, float *, int, float *, int );
 
 double dclock();
 
@@ -20,12 +20,12 @@ int main()
     lda, ldb, ldc, 
     rep;
 
-  double
+  double 
     dtime, dtime_best,        
     gflops, 
     diff;
 
-  double 
+  float 
     *a, *b, *c, *cref, *cold;    
   
   printf( "MY_MMult = [\n" );
@@ -44,11 +44,11 @@ int main()
     /* Allocate space for the matrices */
     /* Note: I create an extra column in A to make sure that
        prefetching beyond the matrix does not cause a segfault */
-    a = ( double * ) malloc( lda * (k+1) * sizeof( double ) );  
-    b = ( double * ) malloc( ldb * n * sizeof( double ) );
-    c = ( double * ) malloc( ldc * n * sizeof( double ) );
-    cold = ( double * ) malloc( ldc * n * sizeof( double ) );
-    cref = ( double * ) malloc( ldc * n * sizeof( double ) );
+    a = ( float * ) malloc( lda * (k+1) * sizeof( float ) );  
+    b = ( float * ) malloc( ldb * n * sizeof( float ) );
+    c = ( float * ) malloc( ldc * n * sizeof( float ) );
+    cold = ( float * ) malloc( ldc * n * sizeof( float ) );
+    cref = ( float * ) malloc( ldc * n * sizeof( float ) );
 
     /* Generate random matrices A, B, Cold */
     random_matrix( m, k, a, lda );

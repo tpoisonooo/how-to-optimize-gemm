@@ -1,7 +1,7 @@
 #define A( i, j ) a[ (i)*lda + (j) ]
 #define B( i, j ) b[ (i)*ldb + (j) ]
 
-void copy_matrix( int m, int n, double *a, int lda, double *b, int ldb )
+void copy_matrix( int m, int n, float *a, int lda, float *b, int ldb )
 {
   int i, j;
 

@@ -6,9 +6,9 @@
 
 /* Routine for computing C = A * B + C */
 
-void MY_MMult( int m, int n, int k, double *a, int lda, 
-                                    double *b, int ldb,
-                                    double *c, int ldc )
+void MY_MMult( int m, int n, int k, float *a, int lda, 
+                                    float *b, int ldb,
+                                    float *c, int ldc )
 {
   int i, j, p;
 

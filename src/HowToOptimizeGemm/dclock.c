@@ -7,7 +7,7 @@ static double gtod_ref_time_sec = 0.0;
 
 double dclock()
 {
-        double         the_time, norm_sec;
+        double the_time, norm_sec;
         struct timeval tv;
 
         gettimeofday( &tv, NULL );
