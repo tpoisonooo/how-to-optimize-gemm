@@ -1,6 +1,7 @@
 #include <stdio.h>
 // #include <malloc.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "parameters.h"
 
@@ -54,6 +55,9 @@ int main()
     random_matrix( m, k, a, lda );
     random_matrix( k, n, b, ldb );
     random_matrix( m, n, cold, ldc );
+#if 0 
+    memset(cold, 0, ldc * n * sizeof(float));
+#endif
 
     copy_matrix( m, n, cold, ldc, cref, ldc );
 

@@ -4,19 +4,43 @@
 #error("arm neon not supported")
 #endif
 
+/* Block sizes */
+#define mc 256 
+#define kc 128
+
 /* Create macros so that the matrices are stored in row-major order */
 
 #define A(i,j) a[ (i)*lda + (j) ]
 #define B(i,j) b[ (i)*ldb + (j) ]
 #define C(i,j) c[ (i)*ldc + (j) ]
 
+#define min(i, j) ((i) < (j) ? (i): (j))
+
 /* Routine for computing C = A * B + C */
 
 void AddDot4x4( int, float *, int, float *, int, float *, int );
 
+void InnerKernel( int, int, int, float *, int, 
+                                       float *, int,
+                                       float *, int );
+
 void MY_MMult( int m, int n, int k, float *a, int lda, 
                                     float *b, int ldb,
-                                    float *c, int ldc )
+                                    float *c, int ldc ) 
+{
+  int i, p, pb, ib; 
+  for (p = 0; p < k; p += kc) {
+    pb = min(k - p, kc);
+    for (i = 0; i < m; i += mc) {
+      ib = min(m - i, mc);
+      InnerKernel(ib, n, pb, &A(i, p), lda, &B(p, 0), ldb, &C(i, 0), ldc);
+    }
+  }
+}
+
+void InnerKernel( int m, int n, int k, float *a, int lda, 
+                                       float *b, int ldb,
+                                       float *c, int ldc )
 {
   int i, j;
 
@@ -62,10 +86,10 @@ void AddDot4x4( int k, float *a, int lda,  float *b, int ldb, float *c, int ldc 
   a_2p_pntr = &A(2, 0);
   a_3p_pntr = &A(3, 0);
 
-  float32x4_t c_p0_sum = {0};
-  float32x4_t c_p1_sum = {0};
-  float32x4_t c_p2_sum = {0};
-  float32x4_t c_p3_sum = {0};
+  float32x4_t c_0p_sum = {0};
+  float32x4_t c_1p_sum = {0};
+  float32x4_t c_2p_sum = {0};
+  float32x4_t c_3p_sum = {0};
 
   register float
     a_0p_reg,
@@ -81,30 +105,30 @@ void AddDot4x4( int k, float *a, int lda,  float *b, int ldb, float *c, int ldc 
     a_2p_reg = *a_2p_pntr++;
     a_3p_reg = *a_3p_pntr++;
 
-    c_p0_sum = vmlaq_n_f32(c_p0_sum, b_reg, a_0p_reg);
-    c_p1_sum = vmlaq_n_f32(c_p1_sum, b_reg, a_1p_reg);
-    c_p2_sum = vmlaq_n_f32(c_p2_sum, b_reg, a_2p_reg);
-    c_p3_sum = vmlaq_n_f32(c_p3_sum, b_reg, a_3p_reg);
+    c_0p_sum = vmlaq_n_f32(c_0p_sum, b_reg, a_0p_reg);
+    c_1p_sum = vmlaq_n_f32(c_1p_sum, b_reg, a_1p_reg);
+    c_2p_sum = vmlaq_n_f32(c_2p_sum, b_reg, a_2p_reg);
+    c_3p_sum = vmlaq_n_f32(c_3p_sum, b_reg, a_3p_reg);
   }
 
   float *c_pntr = 0;
   c_pntr = &C(0, 0);
   float32x4_t c_reg = vld1q_f32(c_pntr);
-  c_reg = vaddq_f32(c_reg, c_p0_sum);
+  c_reg = vaddq_f32(c_reg, c_0p_sum);
   vst1q_f32(c_pntr, c_reg);
 
   c_pntr = &C(1, 0);
   c_reg = vld1q_f32(c_pntr);
-  c_reg = vaddq_f32(c_reg, c_p1_sum);
+  c_reg = vaddq_f32(c_reg, c_1p_sum);
   vst1q_f32(c_pntr, c_reg);
 
   c_pntr = &C(2, 0);
   c_reg = vld1q_f32(c_pntr);
-  c_reg = vaddq_f32(c_reg, c_p2_sum);
+  c_reg = vaddq_f32(c_reg, c_2p_sum);
   vst1q_f32(c_pntr, c_reg);
 
   c_pntr = &C(3, 0);
   c_reg = vld1q_f32(c_pntr);
-  c_reg = vaddq_f32(c_reg, c_p3_sum);
+  c_reg = vaddq_f32(c_reg, c_3p_sum);
   vst1q_f32(c_pntr, c_reg);
 }
