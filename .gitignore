@@ -33,5 +33,4 @@
 *.app
 
 # Images and Test results
-*.png
-src/HowToOptimizeGemm/output_MMult_4x4_8.m
+src/HowToOptimizeGemm/*.png
