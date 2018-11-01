@@ -1,5 +1,5 @@
-OLD  := MMult_4x4_9
-NEW  := MMult_4x4_10
+OLD  := MMult_4x4_12
+NEW  := MMult_4x4_13
 
 #
 # sample makefile
@@ -7,8 +7,8 @@ NEW  := MMult_4x4_10
 
 CC         := gcc
 LINKER     := $(CC)
-CFLAGS     := -O0 -g -Wall
-#CFLAGS     := -O2 -Wall
+#CFLAGS     := -O0 -g -Wall
+CFLAGS     := -O2 -Wall
 LDFLAGS    := -lm
 
 UTIL       := copy_matrix.o \
