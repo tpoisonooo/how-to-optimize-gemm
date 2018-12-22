@@ -1,13 +1,8 @@
-#ifndef KERNEL_NAME
-#define KERNEL_NAME func1 
-#endif
-
 .text
 .align 5
-.global KERNEL_NAME
-.type KERNEL_NAME, %function
+.global func1 
 
-KERNEL_NAME:
+func1:
 .loop1:
     fmla v0.4s, v0.4s, v16.s[0]
     fmla v1.4s, v1.4s, v16.s[1]
@@ -16,9 +11,12 @@ KERNEL_NAME:
 
     subs x0, x0, #1
 
-    fmla v4.4s, v4.4s, v16.s[0]
-    fmla v5.4s, v5.4s, v16.s[1]
-    fmla v6.4s, v6.4s, v16.s[1]
-    fmla v7.4s, v7.4s, v16.s[1]
+    fmla v4.4s, v4.4s, v17.s[0]
+    fmla v5.4s, v5.4s, v17.s[1]
+    fmla v6.4s, v6.4s, v17.s[2]
+    fmla v7.4s, v7.4s, v17.s[3]
+
+    fmla v8.4s, v8.4s, v18.s[0]
+    fmla v9.4s, v9.4s, v18.s[1]
     bne .loop1
     ret
