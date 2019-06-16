@@ -4,6 +4,9 @@
 #error("arm neon not supported")
 #endif
 
+#include <assert.h>
+#include <stdlib.h>
+
 /* Block sizes */
 #define mc 128 
 #define kc 128 
@@ -27,24 +30,26 @@ void packA_4(int m, int k, float* from, int lda, float* to);
 void kernel_4x4(int m, int n, int k, 
         float* sa, float* sb, float* sc, int ldc);
 
-static inline float* fastMalloc(size_t size){
-    void* ptr = NULL;
-    return (float*)posix_memalign(&ptr, 64, size * sizeof(float));
+float* fastMalloc(int size){
+    void* ptr = 0;
+    int iRet = posix_memalign(&ptr, 64, size * sizeof(float));
+    assert(0 == iRet);
+    return ptr;
 }
 
 /* Suppose that m%4==0 and n%4==0 and k%4==0, avoiding process boundary !! */
-void MY_MMult( int m, int n, int k, float * restrict a, int lda, 
-                                    float * restrict b, int ldb,
-                                    float * restrict c, int ldc ) 
+void MY_MMult(int m, int n, int k, float * restrict a, int lda,
+                                   float * restrict b, int ldb,
+                                   float * restrict c, int ldc )
 {
     float* restrict sa = fastMalloc(m * k);
     float* restrict sb = fastMalloc(k * n);
 
-    int ms, ns, ks;
-    int min_m, min_n, min_k;
+    int ms, mms, ns, ks;
+    int min_m, min_mm, min_n, min_k;
     for (ms = 0; ms < m; ms += GEMM_M) {
         min_m = m - ms;
-        if(min_m > GEMM_M) {
+        if (min_m > GEMM_M) {
             min_m = GEMM_M;
         }
 
@@ -63,7 +68,7 @@ void MY_MMult( int m, int n, int k, float * restrict a, int lda,
             } else if(n > GEMM_N) {
                 min_n = (min_n / 2 + GEMM_UNROLL - 1) & ~(GEMM_UNROLL - 1);
             }
-            packB_4(min_k, min_n, b, ldb, sb + ks * ldb);
+            packB_4(min_k, min_n, b + ks * ldb, ldb, sb);
 
             // micro kernel, split A Block to smaller Panel
             for (mms = ms; mms < ms + min_m; mms += min_mm) {
@@ -77,7 +82,7 @@ void MY_MMult( int m, int n, int k, float * restrict a, int lda,
                 }
 
                 // coninueous packA
-                packA_4(min_mm, min_k, lda, sb + min_k * (mms - ms) + mms * lda + ks);
+                packA_4(min_mm, min_k, a + mms * lda + ks, lda, sa + min_k * (mms - ms));
 
                 kernel_4x4(min_mm, min_n, min_k,
                     sa,
@@ -94,7 +99,7 @@ void MY_MMult( int m, int n, int k, float * restrict a, int lda,
                     min_n = (min_n / 2 + GEMM_UNROLL - 1) & ~(GEMM_UNROLL - 1);
                 }
 
-                packB_4(min_k, min_n, b, ldb, sb + ns + ldb * ks);
+                packB_4(min_k, min_n, b + ns + ldb * ks, ldb, sb);
                 kernel_4x4(min_m, min_n, min_k,
                     sa,
                     sb,
@@ -105,6 +110,104 @@ void MY_MMult( int m, int n, int k, float * restrict a, int lda,
 
     free(sa);
     free(sb);
+}
+
+/**
+
+float* a: A
+float* b: (B)T
+float* c: C
+
+
+
+C = A * (B)T
+
+A1 A2 A3    B1 B4 B7
+A4 A5 A6  x B2 B5 B8 => C1 C4 C7 C2 C5 C8 C3 C6 C9 (packed)
+A7 A8 A9    B3 B4 B9
+
+1st. calculate C1
+2st. calculate C4
+3st. calculate C7
+...
+9st. calculate C9
+
+the output has packed.
+
+ */
+
+// TODO
+void kernel_4x4_v2(int m, int n, int k,
+    float* a, float * b, float* restrict c, int ldc) {
+    assert(m > 0 && n > 0 && k > 0);
+    assert(m % 4 == 0 && n % 4 == 0 && k % 4 == 0);
+
+    int i, j, l;
+    for(i = 0; i < m; i += 4) {
+        for(j = 0; j < n; j += 4) {
+            __builtin_prefetch(a, 0, 3);
+            __builtin_prefetch(b, 0, 3);
+
+            float32x4_t v24 = {0};
+            float32x4_t v25 = {0};
+            float32x4_t v26 = {0};
+            float32x4_t v27 = {0};
+           
+            for(l = 0; l < k; l += 4) {
+                float32x4_t v0 = vld1q_f32(a);
+                float32x4_t v16 = vld1q_f32(b);
+
+                v24 = vmlaq_laneq_f32(v24, v0, v16, 0);
+                v25 = vmlaq_laneq_f32(v25, v0, v16, 1);
+                v26 = vmlaq_laneq_f32(v26, v0, v16, 2);
+                v27 = vmlaq_laneq_f32(v27, v0, v16, 3);
+
+                float32x4_t v1 = vld1q_f32(a + 4);
+                float32x4_t v17 = vld1q_f32(b + 4);
+
+                v24 = vmlaq_laneq_f32(v24, v1, v17, 0);
+                v25 = vmlaq_laneq_f32(v25, v1, v17, 1);
+                v26 = vmlaq_laneq_f32(v26, v1, v17, 2);
+                v27 = vmlaq_laneq_f32(v27, v1, v17, 3);
+
+                float32x4_t v2 = vld1q_f32(a + 8);
+                float32x4_t v18 = vld1q_f32(b + 8);
+
+                v24 = vmlaq_laneq_f32(v24, v2, v18, 0);
+                v25 = vmlaq_laneq_f32(v25, v2, v18, 1);
+                v26 = vmlaq_laneq_f32(v26, v2, v18, 2);
+                v27 = vmlaq_laneq_f32(v27, v2, v18, 3);
+
+                float32x4_t v3 = vld1q_f32(a + 12);
+                float32x4_t v19 = vld1q_f32(b + 12);
+
+                v24 = vmlaq_laneq_f32(v24, v3, v19, 0);
+                v25 = vmlaq_laneq_f32(v25, v3, v19, 1);
+                v26 = vmlaq_laneq_f32(v26, v3, v19, 2);
+                v27 = vmlaq_laneq_f32(v27, v3, v19, 3);
+
+                __builtin_prefetch(a+16, 0, 3);
+                __builtin_prefetch(b+16, 0, 3);
+
+                a += 16;
+                b += 16;
+            } // endl
+            
+            v24 = vaddq_f32(vld1q_f32(c), v24);
+            v25 = vaddq_f32(vld1q_f32(c + n), v25);
+            v26 = vaddq_f32(vld1q_f32(c + 2*n), v26);
+            v27 = vaddq_f32(vld1q_f32(c + 3*n), v27);
+
+            vst1q_f32(c, v24);
+            vst1q_f32(c + n, v25);
+            vst1q_f32(c + 2 * n, v26);
+            vst1q_f32(c + 3 * n, v27);
+
+            // TODO
+            c += 4;
+            a = sa;
+        } // endj
+    }// endi
 }
 
 // swap sa and sb, swap m and n.
@@ -147,118 +250,6 @@ void kernel_4x4(int n, int m, int k,
                 v26 = vmlaq_laneq_f32(v26, v0, v16, 2);
                 v27 = vmlaq_laneq_f32(v27, v0, v16, 3);
 
-
-                float32x4_t v8 = vld1q_f32(a1 + 0);
-                v28 = vmlaq_laneq_f32(v28, v8, v16, 0);
-                v29 = vmlaq_laneq_f32(v29, v8, v16, 1);
-                v30 = vmlaq_laneq_f32(v30, v8, v16, 2);
-                v31 = vmlaq_laneq_f32(v31, v8, v16, 3);
-
-                float32x4_t v1 = vld1q_f32(a + 4);
-                float32x4_t v17 = vld1q_f32(b + 4);
-
-                v24 = vmlaq_laneq_f32(v24, v1, v17, 0);
-                v25 = vmlaq_laneq_f32(v25, v1, v17, 1);
-                v26 = vmlaq_laneq_f32(v26, v1, v17, 2);
-                v27 = vmlaq_laneq_f32(v27, v1, v17, 3);
-
-                float32x4_t v9 = vld1q_f32(a1 + 4);
-
-                v28 = vmlaq_laneq_f32(v28, v9, v17, 0);
-                v29 = vmlaq_laneq_f32(v29, v9, v17, 1);
-                v30 = vmlaq_laneq_f32(v30, v9, v17, 2);
-                v31 = vmlaq_laneq_f32(v31, v9, v17, 3);
-
-                float32x4_t v2 = vld1q_f32(a + 8);
-                float32x4_t v18 = vld1q_f32(b + 8);
-
-                v24 = vmlaq_laneq_f32(v24, v2, v18, 0);
-                v25 = vmlaq_laneq_f32(v25, v2, v18, 1);
-                v26 = vmlaq_laneq_f32(v26, v2, v18, 2);
-                v27 = vmlaq_laneq_f32(v27, v2, v18, 3);
-
-                float32x4_t v10 = vld1q_f32(a1 + 8);
-
-                v28 = vmlaq_laneq_f32(v28, v10, v18, 0);
-                v29 = vmlaq_laneq_f32(v29, v10, v18, 1);
-                v30 = vmlaq_laneq_f32(v30, v10, v18, 2);
-                v31 = vmlaq_laneq_f32(v31, v10, v18, 3);
-
-                float32x4_t v3 = vld1q_f32(a + 12);
-                float32x4_t v19 = vld1q_f32(b + 12);
-
-                v24 = vmlaq_laneq_f32(v24, v3, v19, 0);
-                v25 = vmlaq_laneq_f32(v25, v3, v19, 1);
-                v26 = vmlaq_laneq_f32(v26, v3, v19, 2);
-                v27 = vmlaq_laneq_f32(v27, v3, v19, 3);
-
-                float32x4_t v11 = vld1q_f32(a1 + 12);
-
-                v28 = vmlaq_laneq_f32(v28, v11, v19, 0);
-                v29 = vmlaq_laneq_f32(v29, v11, v19, 1);
-                v30 = vmlaq_laneq_f32(v30, v11, v19, 2);
-                v31 = vmlaq_laneq_f32(v31, v11, v19, 3);
-
-                float32x4_t v4 = vld1q_f32(a + 16);
-                float32x4_t v20 = vld1q_f32(b + 16);
-
-                v24 = vmlaq_laneq_f32(v24, v4, v20, 0);
-                v25 = vmlaq_laneq_f32(v25, v4, v20, 1);
-                v26 = vmlaq_laneq_f32(v26, v4, v20, 2);
-                v27 = vmlaq_laneq_f32(v27, v4, v20, 3);
-
-                float32x4_t v12 = vld1q_f32(a1 + 16);
-
-                v28 = vmlaq_laneq_f32(v28, v12, v20, 0);
-                v29 = vmlaq_laneq_f32(v29, v12, v20, 1);
-                v30 = vmlaq_laneq_f32(v30, v12, v20, 2);
-                v31 = vmlaq_laneq_f32(v31, v12, v20, 3);
-
-                float32x4_t v5 = vld1q_f32(a + 20);
-                float32x4_t v21 = vld1q_f32(b + 20);
-
-                v24 = vmlaq_laneq_f32(v24, v5, v21, 0);
-                v25 = vmlaq_laneq_f32(v25, v5, v21, 1);
-                v26 = vmlaq_laneq_f32(v26, v5, v21, 2);
-                v27 = vmlaq_laneq_f32(v27, v5, v21, 3);
-
-                float32x4_t v13 = vld1q_f32(a1 + 20);
-
-                v28 = vmlaq_laneq_f32(v28, v13, v21, 0);
-                v29 = vmlaq_laneq_f32(v29, v13, v21, 1);
-                v30 = vmlaq_laneq_f32(v30, v13, v21, 2);
-                v31 = vmlaq_laneq_f32(v31, v13, v21, 3);
-
-                float32x4_t v6 = vld1q_f32(a + 24);
-                float32x4_t v22 = vld1q_f32(b + 24);
-
-                v24 = vmlaq_laneq_f32(v24, v6, v22, 0);
-                v25 = vmlaq_laneq_f32(v25, v6, v22, 1);
-                v26 = vmlaq_laneq_f32(v26, v6, v22, 2);
-                v27 = vmlaq_laneq_f32(v27, v6, v22, 3);
-
-                float32x4_t v14 = vld1q_f32(a1 + 24);
-
-                v28 = vmlaq_laneq_f32(v28, v14, v22, 0);
-                v29 = vmlaq_laneq_f32(v29, v14, v22, 1);
-                v30 = vmlaq_laneq_f32(v30, v14, v22, 2);
-                v31 = vmlaq_laneq_f32(v31, v14, v22, 3);
-
-                float32x4_t v7 = vld1q_f32(a + 28);
-                float32x4_t v23 = vld1q_f32(b + 28);
-
-                v24 = vmlaq_laneq_f32(v24, v7, v23, 0);
-                v25 = vmlaq_laneq_f32(v25, v7, v23, 1);
-                v26 = vmlaq_laneq_f32(v26, v7, v23, 2);
-                v27 = vmlaq_laneq_f32(v27, v7, v23, 3);
-
-                float32x4_t v15 = vld1q_f32(a1 + 28);
-
-                v28 = vmlaq_laneq_f32(v28, v15, v23, 0);
-                v29 = vmlaq_laneq_f32(v29, v15, v23, 1);
-                v30 = vmlaq_laneq_f32(v30, v15, v23, 2);
-                v31 = vmlaq_laneq_f32(v31, v15, v23, 3);
-
                 __builtin_prefetch(a+32,0,3);
                 __builtin_prefetch(a1+32,0,3);
                 __builtin_prefetch(b+32,0,3);
@@ -266,33 +257,21 @@ void kernel_4x4(int n, int m, int k,
                 a += 32;
                 a1 += 32;
                 b += 32;
-
             }//end l
 
             v24 = vaddq_f32(vld1q_f32(c), v24);
-            v28 = vaddq_f32(vld1q_f32(c+4), v28);
             v25 = vaddq_f32(vld1q_f32(c+m), v25);
-            v29 = vaddq_f32(vld1q_f32(c+m+4), v29);
             v26 = vaddq_f32(vld1q_f32(c+2*m), v26);
-            v30 = vaddq_f32(vld1q_f32(c+2*m+4), v30);
             v27 = vaddq_f32(vld1q_f32(c+3*m), v27);
-            v31 = vaddq_f32(vld1q_f32(c+3*m+4), v31);
-
 
             vst1q_f32(c, v24);
-            vst1q_f32(c+4,v28);
             vst1q_f32(c+m,v25);
-            vst1q_f32(c+m+4,v29);
             vst1q_f32(c+2*m, v26);
-            vst1q_f32(c+2*m+4, v30);
             vst1q_f32(c+3*m, v27);
-            vst1q_f32(c+3*m+4, v31);
 
             a += 4*k;
-            a1+= 4*k;
             c += 8;
             b -= 4*k;
-
         }//end i
 
         c += m*3;
@@ -303,6 +282,7 @@ void kernel_4x4(int n, int m, int k,
 }
 
 void packA_4(int m, int k, float* from, int lda, float* to) {
+    assert( k != 0 && m != 0 && k % 4 == 0 && m % 4 == 0);
     int i, j;
 
     float *a_offset, *a_offset1, *a_offset2, *a_offset3, *a_offset4;
@@ -373,12 +353,13 @@ void packA_4(int m, int k, float* from, int lda, float* to) {
             b_offset += 16;
             i --;
         }while(i > 0);
-    }
+        j --;
+    }while(j > 0);
 }
 
 /* suppose that k and n is mutiple of 4 */
 void packB_4(int k, int n, float* from, int ldb, float* to) {
-    assert( k != 0 && n != 0 && k % 4 == 0 && m % 4 == 0);
+    assert( k != 0 && n != 0 && k % 4 == 0 && n % 4 == 0);
 
     int i, j;
 
@@ -452,5 +433,6 @@ void packB_4(int k, int n, float* from, int ldb, float* to) {
             b_offset1 += n * 4;
             i --;
         }while(i > 0);
-    }
+        j --;
+    }while(j > 0);
 }

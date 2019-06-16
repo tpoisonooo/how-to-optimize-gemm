@@ -18,19 +18,19 @@
 
 /* Routine for computing C = A * B + C */
 
-void AddDot4x4( int, restrict float *, int, restrict float *, int, restrict float *, int );
+void AddDot4x4( int,  float *, int,  float *, int,  float *, int );
 
-void InnerKernel( int, int, int, restrict float *, int, 
-                                       restrict float *, int,
-                                       restrict float *, int );
+void InnerKernel( int, int, int,  float *, int, 
+                                        float *, int,
+                                        float *, int );
 
-void PackMatrixB( int, restrict float *, int, restrict float *);
+void PackMatrixB( int,  float *, int,  float *);
 
-void PackMatrixA( int, restrict float *, int, restrict float *);
+void PackMatrixA( int,  float *, int,  float *);
 
-void MY_MMult( int m, int n, int k, restrict float *a, int lda, 
-                                    restrict float *b, int ldb,
-                                    restrict float *c, int ldc ) 
+void MY_MMult( int m, int n, int k,  float *a, int lda, 
+                                     float *b, int ldb,
+                                     float *c, int ldc ) 
 {
   int i, p, pb, ib; 
   for (p = 0; p < k; p += kc) {
@@ -42,7 +42,7 @@ void MY_MMult( int m, int n, int k, restrict float *a, int lda,
   }
 }
 
-void PackMatrixB( int k, restrict float *b, int ldb, restrict float *b_to) 
+void PackMatrixB( int k,  float *b, int ldb,  float *b_to) 
 {
   int j;
   for ( j = 0; j < k; ++j) {
@@ -54,7 +54,7 @@ void PackMatrixB( int k, restrict float *b, int ldb, restrict float *b_to)
   }
 }
 
-void PackMatrixA( int k, restrict float *a, int lda, restrict float * a_to)
+void PackMatrixA( int k,  float *a, int lda,  float * a_to)
 {
   int i;
   float
@@ -72,9 +72,9 @@ void PackMatrixA( int k, restrict float *a, int lda, restrict float * a_to)
   
 }
 
-void InnerKernel( int m, int n, int k, restrict float *a, int lda, 
-                                       restrict float *b, int ldb,
-                                       restrict float *c, int ldc )
+void InnerKernel( int m, int n, int k,  float *a, int lda, 
+                                        float *b, int ldb,
+                                        float *c, int ldc )
 {
   int i, j;
   // TODO memalign
@@ -95,7 +95,7 @@ void InnerKernel( int m, int n, int k, restrict float *a, int lda,
 }
 
 
-void AddDot4x4( int k, restrict float *a, int lda,  restrict float *b, int ldb, restrict float *c, int ldc )
+void AddDot4x4( int k,  float *a, int lda,   float *b, int ldb,  float *c, int ldc )
 {
   float32x4_t c_0p_sum = {0};
   float32x4_t c_1p_sum = {0};

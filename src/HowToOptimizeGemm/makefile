@@ -1,4 +1,4 @@
-OLD  := MMult_4x4_12
+OLD  := MMult_4x4_13
 NEW  := MMult_4x4_13
 
 #
@@ -7,8 +7,8 @@ NEW  := MMult_4x4_13
 
 CC         := gcc
 LINKER     := $(CC)
-#CFLAGS     := -O0 -g -Wall
-CFLAGS     := -O2 -Wall
+CFLAGS     := -O0 -g -Wall
+# CFLAGS     := -O2 -Wall
 LDFLAGS    := -lm
 
 UTIL       := copy_matrix.o \
