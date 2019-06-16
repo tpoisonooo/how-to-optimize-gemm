@@ -23,11 +23,12 @@
 #define GEMM_M (8)  // GEMM_P
 #define GEMM_K (8)  // GEMM_Q
 #define GEMM_UNROLL (4)
+#define KERNEL_4x4  kernel_4x4_v2
 
 /* Routine for computing C = A * B + C */
 void packB_4(int k, int n, float* from, int ldb, float* to);
 void packA_4(int m, int k, float* from, int lda, float* to);
-void kernel_4x4(int m, int n, int k, 
+void kernel_4x4_v2(int m, int n, int k, 
         float* sa, float* sb, float* sc, int ldc);
 
 float* fastMalloc(int size){
@@ -84,7 +85,7 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
                 // coninueous packA
                 packA_4(min_mm, min_k, a + mms * lda + ks, lda, sa + min_k * (mms - ms));
 
-                kernel_4x4(min_mm, min_n, min_k,
+                KERNEL_4x4(min_mm, min_n, min_k,
                     sa,
                     sb + min_k * (mms - ms),
                     c + mms * ldc, ldc);
@@ -100,7 +101,7 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
                 }
 
                 packB_4(min_k, min_n, b + ns + ldb * ks, ldb, sb);
-                kernel_4x4(min_m, min_n, min_k,
+                KERNEL_4x4(min_m, min_n, min_k,
                     sa,
                     sb,
                     c + ms * ldc + ns, ldc);
@@ -117,8 +118,6 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
 float* a: A
 float* b: (B)T
 float* c: C
-
-
 
 C = A * (B)T
 
@@ -138,15 +137,16 @@ the output has packed.
 
 // TODO
 void kernel_4x4_v2(int m, int n, int k,
-    float* a, float * b, float* restrict c, int ldc) {
+    float* sa, float * sb, float* restrict c, int ldc) {
     assert(m > 0 && n > 0 && k > 0);
     assert(m % 4 == 0 && n % 4 == 0 && k % 4 == 0);
 
+    float *restrict a = sa, *restrict b = sb;
     int i, j, l;
     for(i = 0; i < m; i += 4) {
         for(j = 0; j < n; j += 4) {
-            __builtin_prefetch(a, 0, 3);
             __builtin_prefetch(b, 0, 3);
+            __builtin_prefetch(a, 0, 3);
 
             float32x4_t v24 = {0};
             float32x4_t v25 = {0};
@@ -154,132 +154,76 @@ void kernel_4x4_v2(int m, int n, int k,
             float32x4_t v27 = {0};
            
             for(l = 0; l < k; l += 4) {
-                float32x4_t v0 = vld1q_f32(a);
-                float32x4_t v16 = vld1q_f32(b);
+                float32x4_t v0 = vld1q_f32(b);
+                float32x4_t v16 = vld1q_f32(a);
 
                 v24 = vmlaq_laneq_f32(v24, v0, v16, 0);
                 v25 = vmlaq_laneq_f32(v25, v0, v16, 1);
                 v26 = vmlaq_laneq_f32(v26, v0, v16, 2);
                 v27 = vmlaq_laneq_f32(v27, v0, v16, 3);
 
-                float32x4_t v1 = vld1q_f32(a + 4);
-                float32x4_t v17 = vld1q_f32(b + 4);
+                float32x4_t v1 = vld1q_f32(b + 4);
+                float32x4_t v17 = vld1q_f32(a + 4);
 
                 v24 = vmlaq_laneq_f32(v24, v1, v17, 0);
                 v25 = vmlaq_laneq_f32(v25, v1, v17, 1);
                 v26 = vmlaq_laneq_f32(v26, v1, v17, 2);
                 v27 = vmlaq_laneq_f32(v27, v1, v17, 3);
 
-                float32x4_t v2 = vld1q_f32(a + 8);
-                float32x4_t v18 = vld1q_f32(b + 8);
+                float32x4_t v2 = vld1q_f32(b + 8);
+                float32x4_t v18 = vld1q_f32(a + 8);
 
                 v24 = vmlaq_laneq_f32(v24, v2, v18, 0);
                 v25 = vmlaq_laneq_f32(v25, v2, v18, 1);
                 v26 = vmlaq_laneq_f32(v26, v2, v18, 2);
                 v27 = vmlaq_laneq_f32(v27, v2, v18, 3);
 
-                float32x4_t v3 = vld1q_f32(a + 12);
-                float32x4_t v19 = vld1q_f32(b + 12);
+                float32x4_t v3 = vld1q_f32(b + 12);
+                float32x4_t v19 = vld1q_f32(a + 12);
 
                 v24 = vmlaq_laneq_f32(v24, v3, v19, 0);
                 v25 = vmlaq_laneq_f32(v25, v3, v19, 1);
                 v26 = vmlaq_laneq_f32(v26, v3, v19, 2);
                 v27 = vmlaq_laneq_f32(v27, v3, v19, 3);
 
-                __builtin_prefetch(a+16, 0, 3);
                 __builtin_prefetch(b+16, 0, 3);
+                __builtin_prefetch(a+16, 0, 3);
 
-                a += 16;
                 b += 16;
+                a += 16;
             } // endl
             
             v24 = vaddq_f32(vld1q_f32(c), v24);
-            v25 = vaddq_f32(vld1q_f32(c + n), v25);
-            v26 = vaddq_f32(vld1q_f32(c + 2*n), v26);
-            v27 = vaddq_f32(vld1q_f32(c + 3*n), v27);
+            v25 = vaddq_f32(vld1q_f32(c + ldc), v25);
+            v26 = vaddq_f32(vld1q_f32(c + 2*ldc), v26);
+            v27 = vaddq_f32(vld1q_f32(c + 3*ldc), v27);
 
             vst1q_f32(c, v24);
-            vst1q_f32(c + n, v25);
-            vst1q_f32(c + 2 * n, v26);
-            vst1q_f32(c + 3 * n, v27);
+            vst1q_f32(c + ldc, v25);
+            vst1q_f32(c + 2 * ldc, v26);
+            vst1q_f32(c + 3 * ldc, v27);
 
-            // TODO
             c += 4;
-            a = sa;
+            a -= 4*k;
         } // endj
+        c += ldc*3;
+        a += 4*k;
+        b = sb;
     }// endi
 }
 
-// swap sa and sb, swap m and n.
-void kernel_4x4(int n, int m, int k, 
-        float* sb, float* sa, float* sc, int ldc){
-    assert(m > 0 && n > 0 && k > 0);
-    assert(m % 4 == 0 && n % 4 == 0 && k % 4 == 0);
-
-    float* a = sa;
-    float* a1 = a + k*4;
-    float* b = sb;
-    float* c = sc;
-
-    int i,j,l;
-
-    for(j=0; (j+4)<=n; j+= 4){
-
-        for(i=0; (i+8)<=m; i+=8){
-
-            __builtin_prefetch(a,0,3);
-            __builtin_prefetch(a1,0,3);
-            __builtin_prefetch(b,0,3);
-
-            float32x4_t v24 = {0};
-            float32x4_t v25 = {0};
-            float32x4_t v26 = {0};
-            float32x4_t v27 = {0};
-            float32x4_t v28 = {0};
-            float32x4_t v29 = {0};
-            float32x4_t v30 = {0};
-            float32x4_t v31 = {0};
-
-            for(l=0; (l+8)<=k; l+=8){
-
-                float32x4_t v0 = vld1q_f32(a + 0);
-                float32x4_t v16 = vld1q_f32(b + 0);
-
-                v24 = vmlaq_laneq_f32(v24, v0, v16, 0);
-                v25 = vmlaq_laneq_f32(v25, v0, v16, 1);
-                v26 = vmlaq_laneq_f32(v26, v0, v16, 2);
-                v27 = vmlaq_laneq_f32(v27, v0, v16, 3);
-
-                __builtin_prefetch(a+32,0,3);
-                __builtin_prefetch(a1+32,0,3);
-                __builtin_prefetch(b+32,0,3);
-
-                a += 32;
-                a1 += 32;
-                b += 32;
-            }//end l
-
-            v24 = vaddq_f32(vld1q_f32(c), v24);
-            v25 = vaddq_f32(vld1q_f32(c+m), v25);
-            v26 = vaddq_f32(vld1q_f32(c+2*m), v26);
-            v27 = vaddq_f32(vld1q_f32(c+3*m), v27);
-
-            vst1q_f32(c, v24);
-            vst1q_f32(c+m,v25);
-            vst1q_f32(c+2*m, v26);
-            vst1q_f32(c+3*m, v27);
-
-            a += 4*k;
-            c += 8;
-            b -= 4*k;
+/*
+            b += 4*k;
+            c += 4;
+            a -= 4*k;
         }//end i
 
         c += m*3;
-        a = sa;
+        b = sb;
         a1 = a + 4*k;
-        b += k*4;
+        a += k*4;
     }//end j
-}
+    */
 
 void packA_4(int m, int k, float* from, int lda, float* to) {
     assert( k != 0 && m != 0 && k % 4 == 0 && m % 4 == 0);

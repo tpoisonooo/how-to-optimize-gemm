@@ -55,7 +55,7 @@ int main()
     random_matrix( m, k, a, lda );
     random_matrix( k, n, b, ldb );
     random_matrix( m, n, cold, ldc );
-#if 0 
+#if 1 
     memset(cold, 0, ldc * n * sizeof(float));
 #endif
 
@@ -83,6 +83,9 @@ int main()
     }
 
     diff = compare_matrices( m, n, c, ldc, cref, ldc );
+    if(diff > 0.5f || diff < -0.5f){
+        exit(0);
+    }
 
     printf( "%d %le %le \n", p, gflops / dtime_best, diff );
     fflush( stdout );
