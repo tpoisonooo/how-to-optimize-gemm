@@ -10,6 +10,8 @@
 /* Block sizes */
 #define mc 128 
 #define kc 128 
+#define DEBUG_PACK_SHAPE
+#undef DEBUG_PACK_SHAPE
 
 /* Create macros so that the matrices are stored in row-major order */
 
@@ -19,9 +21,9 @@
 
 #define min(i, j) ((i) < (j) ? (i): (j))
 
-#define GEMM_N (8)  // GEMM_R
-#define GEMM_M (8)  // GEMM_P
-#define GEMM_K (8)  // GEMM_Q
+#define GEMM_N (16)  // GEMM_R
+#define GEMM_M (16)  // GEMM_P
+#define GEMM_K (16)  // GEMM_Q
 #define GEMM_UNROLL (4)
 #define KERNEL_4x4  kernel_4x4_v2
 
@@ -137,11 +139,11 @@ the output has packed.
 
 // TODO
 void kernel_4x4_v2(int m, int n, int k,
-    float* sa, float * sb, float* restrict c, int ldc) {
+    float* sa, float * sb, float* sc, int ldc) {
     assert(m > 0 && n > 0 && k > 0);
     assert(m % 4 == 0 && n % 4 == 0 && k % 4 == 0);
 
-    float *restrict a = sa, *restrict b = sb;
+    float *restrict a = sa, *restrict b = sb, *restrict c = sc;
     int i, j, l;
     for(i = 0; i < m; i += 4) {
         for(j = 0; j < n; j += 4) {
@@ -206,7 +208,8 @@ void kernel_4x4_v2(int m, int n, int k,
             c += 4;
             a -= 4*k;
         } // endj
-        c += ldc*3;
+        sc += ldc*4;
+        c = sc;;
         a += 4*k;
         b = sb;
     }// endi
@@ -226,6 +229,9 @@ void kernel_4x4_v2(int m, int n, int k,
     */
 
 void packA_4(int m, int k, float* from, int lda, float* to) {
+#ifdef DEBUG_PACK_SHAPE
+    printf("\n packA_4, m=%d, k=%d", m, k);
+#endif
     assert( k != 0 && m != 0 && k % 4 == 0 && m % 4 == 0);
     int i, j;
 
@@ -304,6 +310,9 @@ void packA_4(int m, int k, float* from, int lda, float* to) {
 /* suppose that k and n is mutiple of 4 */
 void packB_4(int k, int n, float* from, int ldb, float* to) {
     assert( k != 0 && n != 0 && k % 4 == 0 && n % 4 == 0);
+#ifdef DEBUG_PACK_SHAPE
+    printf("\n packB_4, k=%d, n=%d", k, n);
+#endif
 
     int i, j;
 
