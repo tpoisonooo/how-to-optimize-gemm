@@ -6,11 +6,11 @@
 
 float compare_matrices( int m, int n, float *a, int lda, float *b, int ldb )
 {
-    printf("\n---result----\n");
-    print_matrix(m, n, a, lda);
-    printf("\n-------\n");
-    print_matrix(m, n, b, ldb);
-    printf("\n-------\n");
+//    printf("\n---result----\n");
+//    print_matrix(m, n, a, lda);
+//    printf("\n-------\n");
+//    print_matrix(m, n, b, ldb);
+//    printf("\n-------\n");
   int i, j;
   float max_diff = 0.0, diff;
   int printed = 0;

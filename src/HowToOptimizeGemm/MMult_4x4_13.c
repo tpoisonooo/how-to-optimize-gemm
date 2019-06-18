@@ -12,6 +12,8 @@
 #define kc 128 
 #define DEBUG_PACK_SHAPE
 #undef DEBUG_PACK_SHAPE
+#define DEBUG_PRINT_DATA
+#undef DEBUG_PRINT_DATA
 
 /* Create macros so that the matrices are stored in row-major order */
 
@@ -21,9 +23,9 @@
 
 #define min(i, j) ((i) < (j) ? (i): (j))
 
-#define GEMM_N (8)  // GEMM_R
-#define GEMM_M (8)  // GEMM_P
-#define GEMM_K (8)  // GEMM_Q
+#define GEMM_N (240)  // GEMM_R
+#define GEMM_M (240)  // GEMM_P
+#define GEMM_K (240)  // GEMM_Q
 #define GEMM_UNROLL (4)
 #define KERNEL_4x4  kernel_4x4_v2
 
@@ -45,11 +47,13 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
                                    float * restrict b, int ldb,
                                    float * restrict c, int ldc )
 {
+#ifdef DEBUG_PRINT_DATA
     printf("\n-------\n");
     print_matrix(m, k, a, lda);
     printf("\n-------\n");
     print_matrix(k, n, b, ldb);
     printf("\n-------\n");
+#endif
     float* restrict sa = fastMalloc(m * k);
     float* restrict sb = fastMalloc(k * n);
 
@@ -92,16 +96,11 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
                 // coninueous packA
                 packA_4(min_mm, min_k, a + mms * lda + ks, lda, sa + min_k * (mms - ms));
 
-               // KERNEL_4x4(min_mm, min_n, min_k,
-               //     sa,
-               //     sb + min_k * (mms - ms),
-               //     c + mms * ldc, ldc);
-                KERNEL_4x4(min_mm, min_n, min_k,
-                    sa + min_k * (mms - ms),
-                    sb,
-                    c + mms * ldc, ldc);
-    printf("\n---first kernel----\n");
-    print_matrix(m, n, c, ldc);
+                KERNEL_4x4(min_mm, min_n, min_k, sa + min_k * (mms - ms), sb, c + mms * ldc, ldc);
+#ifdef DEBUG_PRINT_DATA
+                printf("\n---first kernel----\n");
+                print_matrix(m, n, c, ldc);
+#endif
             }
 
             // the first B Block has been packed, proc the others 
@@ -114,12 +113,11 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
                 }
 
                 packB_4(min_k, min_n, b + ns + ldb * ks, ldb, sb);
-                KERNEL_4x4(min_m, min_n, min_k,
-                    sa,
-                    sb,
-                    c + ms * ldc + ns, ldc);
-    printf("\n----second kernel---\n");
-    print_matrix(m, n, c, ldc);
+                KERNEL_4x4(min_m, min_n, min_k, sa, sb, c + ms * ldc + ns, ldc);
+#ifdef DEBUG_PRINT_DATA
+                printf("\n----second kernel---\n");
+                print_matrix(m, n, c, ldc);
+#endif
             }
         }
     }
@@ -395,7 +393,7 @@ void packB_4(int k, int n, float* from, int ldb, float* to) {
             *(b_offset1 + 14) = ctemp15;
             *(b_offset1 + 15) = ctemp16;
 
-            b_offset1 += n * 4;
+            b_offset1 += k * 4;
             i --;
         }while(i > 0);
         j --;
