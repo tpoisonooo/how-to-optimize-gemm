@@ -138,17 +138,22 @@ A1 A2 A3    B1 B4 B7
 A4 A5 A6  x B2 B5 B8 => C1 C4 C7 C2 C5 C8 C3 C6 C9 (packed)
 A7 A8 A9    B3 B4 B9
 
+Calculation sequence:
 1st. calculate C1
 2st. calculate C4
 3st. calculate C7
 ...
 9st. calculate C9
 
-the output has packed.
+A1-A9/B1-B9 is packed block, not single number.
+C1-C9 is 4x4 block, not single number.
+
+Output
+C1 C2 C3
+C4 C5 C6
+C7 C8 C9
 
  */
-
-// TODO
 void kernel_4x4_v2(int m, int n, int k,
     float* sa, float * sb, float* sc, int ldc) {
     assert(m > 0 && n > 0 && k > 0);
@@ -225,19 +230,32 @@ void kernel_4x4_v2(int m, int n, int k,
         b = sb;
     }// endi
 }
-/*
-            b += 4*k;
-            c += 4;
-            a -= 4*k;
-        }//end i
 
-        c += m*3;
-        b = sb;
-        a1 = a + 4*k;
-        a += k*4;
-    }//end j
-    */
 
+/**
+pack A means
+
+Input:
+0 1 2 3  4 5 6 7
+0 1 2 3  4 5 6 7
+0 1 2 3  4 5 6 7
+0 1 2 3  4 5 6 7
+
+8 9 a b  c d e f
+8 9 a b  c d e f
+8 9 a b  c d e f
+8 9 a b  c d e f
+
+Pack it zigzag
+
+Output:
+0 0 0 0 1 1 1 1 2 2 2 2 3 3 3 3
+4 4 4 4 5 5 5 5 6 6 6 6 7 7 7 7
+8 8 8 8 9 9 9 9 a a a a b b b b 
+c c c c d d d d e e e e f f f f
+
+Draw it with a line
+*/
 void packA_4(int m, int k, float* from, int lda, float* to) {
 #ifdef DEBUG_PACK_SHAPE
     printf("\n packA_4, m=%d, k=%d", m, k);
@@ -317,7 +335,29 @@ void packA_4(int m, int k, float* from, int lda, float* to) {
     }while(j > 0);
 }
 
-/* suppose that k and n is mutiple of 4 */
+/*
+suppose that k and n is mutiple of 4
+pack B means
+
+Input:
+0 1 2 3  4 5 6 7
+0 1 2 3  4 5 6 7
+0 1 2 3  4 5 6 7
+0 1 2 3  4 5 6 7
+
+8 9 a b  c d e f
+8 9 a b  c d e f
+8 9 a b  c d e f
+8 9 a b  c d e f
+
+Pack it zigzag, not like pack A
+
+Output:
+0 1 2 3 0 1 2 3 0 1 2 3 0 1 2 3
+8 9 a b 8 9 a b 8 9 a b 8 9 a b
+4 5 6 7 4 5 6 7 4 5 6 7 4 5 6 7
+c d e f c d e f c d e f c d e f
+*/
 void packB_4(int k, int n, float* from, int ldb, float* to) {
     assert( k != 0 && n != 0 && k % 4 == 0 && n % 4 == 0);
 #ifdef DEBUG_PACK_SHAPE
