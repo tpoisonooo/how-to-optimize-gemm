@@ -2,7 +2,7 @@
 In the test driver, there is a loop "for ( p=PFIRST; p<= PLAST; p+= PINC )"
 The below parameters set this range of values that p takes on 
 */   
-#define PFIRST 16 
+#define PFIRST 12 
 #define PLAST  80 
 #define PINC   4
 

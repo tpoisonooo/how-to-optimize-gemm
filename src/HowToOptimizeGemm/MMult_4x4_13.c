@@ -21,9 +21,9 @@
 
 #define min(i, j) ((i) < (j) ? (i): (j))
 
-#define GEMM_N (16)  // GEMM_R
-#define GEMM_M (16)  // GEMM_P
-#define GEMM_K (16)  // GEMM_Q
+#define GEMM_N (8)  // GEMM_R
+#define GEMM_M (8)  // GEMM_P
+#define GEMM_K (8)  // GEMM_Q
 #define GEMM_UNROLL (4)
 #define KERNEL_4x4  kernel_4x4_v2
 
@@ -45,6 +45,11 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
                                    float * restrict b, int ldb,
                                    float * restrict c, int ldc )
 {
+    printf("\n-------\n");
+    print_matrix(m, k, a, lda);
+    printf("\n-------\n");
+    print_matrix(k, n, b, ldb);
+    printf("\n-------\n");
     float* restrict sa = fastMalloc(m * k);
     float* restrict sb = fastMalloc(k * n);
 
@@ -87,10 +92,16 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
                 // coninueous packA
                 packA_4(min_mm, min_k, a + mms * lda + ks, lda, sa + min_k * (mms - ms));
 
+               // KERNEL_4x4(min_mm, min_n, min_k,
+               //     sa,
+               //     sb + min_k * (mms - ms),
+               //     c + mms * ldc, ldc);
                 KERNEL_4x4(min_mm, min_n, min_k,
-                    sa,
-                    sb + min_k * (mms - ms),
+                    sa + min_k * (mms - ms),
+                    sb,
                     c + mms * ldc, ldc);
+    printf("\n---first kernel----\n");
+    print_matrix(m, n, c, ldc);
             }
 
             // the first B Block has been packed, proc the others 
@@ -107,6 +118,8 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
                     sa,
                     sb,
                     c + ms * ldc + ns, ldc);
+    printf("\n----second kernel---\n");
+    print_matrix(m, n, c, ldc);
             }
         }
     }
@@ -214,7 +227,6 @@ void kernel_4x4_v2(int m, int n, int k,
         b = sb;
     }// endi
 }
-
 /*
             b += 4*k;
             c += 4;
