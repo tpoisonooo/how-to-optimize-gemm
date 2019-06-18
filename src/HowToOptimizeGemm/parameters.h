@@ -21,7 +21,7 @@ In the test driver, each experiment is repeated NREPEATS times and
 the best time from these repeats is used to compute the performance
 */
 
-#define NREPEATS 1 
+#define NREPEATS 20 
 
 /* 
 Matrices A, B, and C are stored in two dimensional arrays with
