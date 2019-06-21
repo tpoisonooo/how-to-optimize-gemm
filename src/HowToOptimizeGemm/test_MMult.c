@@ -77,9 +77,9 @@ int main()
       dtime = dclock() - dtime;
 
       if ( rep==0 )
-	dtime_best = dtime;
+        dtime_best = dtime;
       else
-	dtime_best = ( dtime < dtime_best ? dtime : dtime_best );
+	    dtime_best = ( dtime < dtime_best ? dtime : dtime_best );
     }
 
     diff = compare_matrices( m, n, c, ldc, cref, ldc );

@@ -11,7 +11,7 @@
 #define DEBUG_PACK_SHAPE
 #undef DEBUG_PACK_SHAPE
 #define DEBUG_PRINT_DATA
-#undef DEBUG_PRINT_DATA
+//#undef DEBUG_PRINT_DATA
 
 /* Create macros so that the matrices are stored in row-major order */
 
@@ -49,16 +49,16 @@ After reading 6.4, rk3399 L2 cache is large, mc = 1MB / 256 = 4096
 
 
 */
-#define GEMM_N (384)  // GEMM_R
-#define GEMM_M (4096)  // GEMM_P
-#define GEMM_K (256)  // GEMM_Q
+#define GEMM_N (8)  // GEMM_R
+#define GEMM_M (8)  // GEMM_P
+#define GEMM_K (8)  // GEMM_Q
 #define GEMM_UNROLL (4)
-#define KERNEL_4x4  kernel_4x4_v2
+#define KERNEL_4x4  kernel_4x4_v3
 
 /* Routine for computing C = A * B + C */
 void packB_4(int k, int n, float* from, int ldb, float* to);
 void packA_4(int m, int k, float* from, int lda, float* to);
-void kernel_4x4_v2(int m, int n, int k, 
+void kernel_4x4_v3(int m, int n, int k, 
         float* sa, float* sb, float* sc, int ldc);
 
 float* fastMalloc(int size){
@@ -180,29 +180,101 @@ C4 C5 C6
 C7 C8 C9
 
  */
-void kernel_4x4_v2(int m, int n, int k,
+void kernel_4x4_v3(int m, int n, int k,
     float* sa, float * sb, float* sc, int ldc) {
     assert(m > 0 && n > 0 && k > 0);
     assert(m % 4 == 0 && n % 4 == 0 && k % 4 == 0);
 
     float *restrict a = sa, *restrict b = sb, *restrict c = sc;
-    int i, j, l;
+    int i, j;
+#if __aarch64__
+    int ldc_offset = ldc * sizeof(float);
+#endif
     for(i = 0; i < m; i += 4) {
         for(j = 0; j < n; j += 4) {
-#ifdef __ARM_NEON
 // TODO use __aarch64__ 
-#if 0 
+#if __aarch64__ 
 asm volatile(
-    "prfm pldl1keep, [%0, #128]     \n"
-    "prfm pldl1keep, [%1, #128]     \n"
+    ".macro INIT4x4                     \n"
+    "   fmov s16, wzr                   \n"
+    "   fmov s17, s16                   \n"
+    "   fmov s20, s17                   \n"
+    "   fmov s21, s20                   \n"
+    "   fmov s24, s21                   \n"
+    "   fmov s25, s24                   \n"
+    "   fmov s28, s25                   \n"
+    "   fmov s29, s28                   \n"
+    ".endm                              \n" 
+    "                                   \n"
+    ".macro KERNEL4x4                   \n"
+    "   ld1 {v8.2s, v9.2s}, [%1]        \n"
+    "   add %1, %1, #16                 \n"
+    "   ld1 {v0.2s, v1.2s}, [%0]        \n"
+    "   add %0, %0, #16                 \n"
+    "                                   \n"
+    "   fmla v16.2s, v0.2s, v8.s[0]     \n"
+    "   fmla v29.2s, v1.2s, v9.s[1]     \n"
+    "                                   \n"
+    "   fmla v20.2s, v0.2s, v8.s[1]     \n"
+    "   fmla v25.2s, v1.2s, v9.s[0]     \n"
+    "                                   \n"
+    "   fmla v24.2s, v0.2s, v9.s[0]     \n"
+    "   fmla v21.2s, v1.2s, v8.s[1]     \n"
+    "                                   \n"
+    "   fmla v28.2s, v0.2s, v9.s[1]     \n"
+    "   fmla v17.2s, v1.2s, v8.s[0]     \n"
+    ".endm                              \n"
+    "                                   \n"
+    ".macro SAVE4x4                     \n"
+    "   ld1 {v8.2s, v9.2s}, [%2]        \n"
+    "   fadd v8.2s, v8.2s, v16.2s       \n"
+    "   fadd v9.2s, v9.2s, v17.2s       \n"
+    "   st1 {v8.2s, v9.2s}, [%2]        \n"
+    "                                   \n"
+    "   add x13, %2, %3                 \n"
+    "   ld1 {v12.2s, v13.2s}, [x13]     \n"
+    "   fadd v12.2s, v12.2s, v20.2s     \n"
+    "   fadd v13.2s, v13.2s, v21.2s     \n"
+    "   st1 {v12.2s, v13.2s}, [x13]     \n"
+    "                                   \n"
+    "   add x14, x13, %3                \n"
+    "   ld1 {v8.2s, v9.2s}, [x14]       \n"
+    "   fadd v8.2s, v8.2s, v24.2s       \n"
+    "   fadd v9.2s, v9.2s, v25.2s       \n"
+    "   st1 {v8.2s, v9.2s}, [x14]       \n"
+    "                                   \n"
+    "   add x13, x14, %3                \n"
+    "   ld1 {v12.2s, v13.2s}, [x13]     \n"
+    "   fadd v12.2s, v12.2s, v28.2s     \n"
+    "   fadd v13.2s, v13.2s, v29.2s     \n"
+    "   st1 {v12.2s, v13.2s}, [x13]     \n"
+    "                                   \n"
+    ".endm                              \n"
+    "                                   \n"
+    "asr x8,%4,2                        \n"
+    "run:                               \n"
+    "   prfm pldl1keep, [%0, #64]       \n"
+    "   prfm pldl1keep, [%1, #64]       \n"
+    "   INIT4x4                         \n"
+    "   KERNEL4x4                       \n"
+    "   KERNEL4x4                       \n"
+    "   KERNEL4x4                       \n"
+    "   KERNEL4x4                       \n"
+    "   SAVE4x4                         \n"
+    "   subs x8, x8, #1                 \n"
+    "   bne run                         \n"
+    "                                   \n"
     : "=r"(a),
       "=r"(b),
       "=r"(c),
-      "r"(ldc),
-      "r"(k)
-    : "0",
-      "1"
-    : "memory", "x0"
+      "=r"(ldc_offset),
+      "=r"(k)
+    : "0"(a),
+      "1"(b),
+      "2"(c),
+      "3"(ldc_offset),
+      "4"(k)
+    : "memory", "cc", "x8", "x13", "x14", "v0", "v1", "v8", "v9", "v12", "v13", "v16", "v17", "v29", "v20", "v21", "v24", "v25", "v28", "v29"
 );  
 #else
             __builtin_prefetch(b, 0, 3);
@@ -213,7 +285,7 @@ asm volatile(
             float32x4_t v26 = {0};
             float32x4_t v27 = {0};
            
-            for(l = 0; l < k; l += 4) {
+            for(int l = 0; l < k; l += 4) {
                 float32x4_t v0 = vld1q_f32(b);
                 float32x4_t v16 = vld1q_f32(a);
 
@@ -262,10 +334,9 @@ asm volatile(
             vst1q_f32(c + ldc, v25);
             vst1q_f32(c + 2 * ldc, v26);
             vst1q_f32(c + 3 * ldc, v27);
-
+#endif
             c += 4;
             a -= 4*k;
-#endif
         } // endj
         sc += ldc*4;
         c = sc;;
