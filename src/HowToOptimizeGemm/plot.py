@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 def readFile(filename):
     f = open(filename)
-    sizes = []
-    times = []
+    sizes = [40]
+    times = [0.0]
     title = ''
     try:
         title = f.readline()

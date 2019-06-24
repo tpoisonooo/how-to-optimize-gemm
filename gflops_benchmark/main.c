@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 #define LOOP (1e9)
-#define OP_FLOATS (40)
+#define OP_FLOATS (80)
 
 void func1(int);
 void func2(int);

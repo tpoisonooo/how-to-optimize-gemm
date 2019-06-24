@@ -2,9 +2,9 @@
 In the test driver, there is a loop "for ( p=PFIRST; p<= PLAST; p+= PINC )"
 The below parameters set this range of values that p takes on 
 */   
-#define PFIRST 40 
-#define PLAST  800 
-#define PINC   40
+#define PFIRST 40
+#define PLAST  800
+#define PINC   40 
 
 /* 
 In the test driver, the m, n, and k dimensions are set to the below 
