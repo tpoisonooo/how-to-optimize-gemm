@@ -85,6 +85,7 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
 
     int ms, mms, ns, ks;
     int min_m, min_mm, min_n, min_k;
+    int l1stride = 1;
     for (ms = 0; ms < m; ms += GEMM_M) {
         min_m = m - ms;
         if (min_m > GEMM_M) {
@@ -105,6 +106,8 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
                 min_n = GEMM_N;
             } else if(n > GEMM_N) {
                 min_n = (min_n / 2 + GEMM_UNROLL - 1) & ~(GEMM_UNROLL - 1);
+            } else {
+                l1stride = 0;
             }
             packB_4(min_k, min_n, b + ks * ldb, ldb, sb);
 
@@ -120,9 +123,9 @@ void MY_MMult(int m, int n, int k, float * restrict a, int lda,
                 }
 
                 // coninueous packA
-                packA_4(min_mm, min_k, a + mms * lda + ks, lda, sa + min_k * (mms - ms));
+                packA_4(min_mm, min_k, a + mms * lda + ks, lda, sa + min_k * (mms - ms) * l1stride);
 
-                KERNEL_4x4(min_mm, min_n, min_k, sa + min_k * (mms - ms), sb, c + mms * ldc, ldc);
+                KERNEL_4x4(min_mm, min_n, min_k, sa + l1stride * min_k * (mms - ms), sb, c + mms * ldc, ldc);
 #ifdef DEBUG_PRINT_DATA
                 printf("\n---first kernel----\n");
                 print_matrix(m, n, c, ldc);
@@ -196,65 +199,47 @@ void kernel_4x4_v3(int m, int n, int k,
 asm volatile(
     ".macro INIT4x4                     \n"
     "   fmov s16, wzr                   \n"
-    "   fmov s17, s16                   \n"
-    "   fmov s20, s17                   \n"
-    "   fmov s21, s20                   \n"
-    "   fmov s24, s21                   \n"
-    "   fmov s25, s24                   \n"
-    "   fmov s28, s25                   \n"
-    "   fmov s29, s28                   \n"
+    "   fmov s20, s16                   \n"
+    "   fmov s24, s20                   \n"
+    "   fmov s28, s24                   \n"
     ".endm                              \n" 
     "                                   \n"
     ".macro KERNEL4x4                   \n"
-    "   ld1 {v8.2s, v9.2s}, [%0]        \n"
-    "   add %0, %0, #16                 \n"
-    "   ld1 {v0.2s, v1.2s}, [%1]        \n"
-    "   add %1, %1, #16                 \n"
-    "                                   \n"
-    "   fmla v16.2s, v0.2s, v8.s[0]     \n"
-    "   fmla v29.2s, v1.2s, v9.s[1]     \n"
-    "   fmla v20.2s, v0.2s, v8.s[1]     \n"
-    "   fmla v25.2s, v1.2s, v9.s[0]     \n"
-    "   fmla v24.2s, v0.2s, v9.s[0]     \n"
-    "   fmla v21.2s, v1.2s, v8.s[1]     \n"
-    "   fmla v28.2s, v0.2s, v9.s[1]     \n"
-    "   fmla v17.2s, v1.2s, v8.s[0]     \n"
-    "                                   \n"
-    "                                   \n"
-    "                                   \n"
+    "   ld1 {v8.4s}, [%0], #16          \n"
+    "   ld1 {v0.4s}, [%1], #16          \n"
+    "   fmla v16.4s, v0.4s, v8.s[0]     \n"
+    "   fmla v20.4s, v0.4s, v8.s[1]     \n"
+    "   fmla v24.4s, v0.4s, v8.s[2]     \n"
+    "   fmla v28.4s, v0.4s, v8.s[3]     \n"
     ".endm                              \n"
     "                                   \n"
     ".macro SAVE4x4                     \n"
-    "   ld1 {v8.2s, v9.2s}, [%2]        \n"
-    "   fadd v8.2s, v8.2s, v16.2s       \n"
-    "   fadd v9.2s, v9.2s, v17.2s       \n"
-    "   st1 {v8.2s, v9.2s}, [%2]        \n"
+    "   ld1 {v8.4s}, [%2]               \n"
+    "   fadd v8.4s, v8.4s, v16.4s       \n"
+    "   st1 {v8.4s}, [%2]               \n"
     "                                   \n"
     "   add x13, %2, %3                 \n"
-    "   ld1 {v12.2s, v13.2s}, [x13]     \n"
-    "   fadd v12.2s, v12.2s, v20.2s     \n"
-    "   fadd v13.2s, v13.2s, v21.2s     \n"
-    "   st1 {v12.2s, v13.2s}, [x13]     \n"
+    "   ld1 {v12.4s}, [x13]             \n"
+    "   fadd v12.4s, v12.4s, v20.4s     \n"
+    "   st1 {v12.4s}, [x13]             \n"
     "                                   \n"
     "   add x14, x13, %3                \n"
-    "   ld1 {v8.2s, v9.2s}, [x14]       \n"
-    "   fadd v8.2s, v8.2s, v24.2s       \n"
-    "   fadd v9.2s, v9.2s, v25.2s       \n"
-    "   st1 {v8.2s, v9.2s}, [x14]       \n"
+    "   ld1 {v8.4s}, [x14]              \n"
+    "   fadd v8.4s, v8.4s, v24.4s       \n"
+    "   st1 {v8.4s}, [x14]              \n"
     "                                   \n"
     "   add x13, x14, %3                \n"
-    "   ld1 {v12.2s, v13.2s}, [x13]     \n"
-    "   fadd v12.2s, v12.2s, v28.2s     \n"
-    "   fadd v13.2s, v13.2s, v29.2s     \n"
-    "   st1 {v12.2s, v13.2s}, [x13]     \n"
+    "   ld1 {v12.4s}, [x13]             \n"
+    "   fadd v12.4s, v12.4s, v28.4s     \n"
+    "   st1 {v12.4s}, [x13]             \n"
     "                                   \n"
     ".endm                              \n"
     "                                   \n"
     "INIT4x4                            \n"
     "asr x8,%4,2                        \n"
     "run:                               \n"
-    "   prfm pldl1keep, [%0, #64]       \n"
-    "   prfm pldl1keep, [%1, #64]       \n"
+    "   prfm pldl1keep, [%0, #256]      \n"
+    "   prfm pldl1keep, [%1, #256]      \n"
     "   KERNEL4x4                       \n"
     "   KERNEL4x4                       \n"
     "   KERNEL4x4                       \n"
@@ -273,7 +258,7 @@ asm volatile(
       "2"(c),
       "3"(ldc_offset),
       "4"(k)
-    : "memory", "cc", "x8", "x13", "x14", "v0", "v1", "v8", "v9", "v12", "v13", "v16", "v17", "v29", "v20", "v21", "v24", "v25", "v28", "v29"
+    : "memory", "cc", "x8", "x13", "x14", "v0", "v8", "v12", "v16", "v20", "v24", "v28"
 );  
 #else
             __builtin_prefetch(b, 0, 3);
