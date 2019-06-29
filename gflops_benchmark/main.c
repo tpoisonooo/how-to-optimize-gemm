@@ -6,6 +6,7 @@
 
 void func1(int);
 void func2(int);
+void func3(int);
 
 static double get_time(struct timespec *start,
                        struct timespec *end) {
@@ -18,7 +19,8 @@ int main() {
 
     clock_gettime(CLOCK_MONOTONIC_RAW, &start);
 //    func1(LOOP);
-    func2(LOOP);
+//    func2(LOOP);
+    func3(LOOP);
     clock_gettime(CLOCK_MONOTONIC_RAW, &end);
 
     time_used = get_time(&start, &end);
