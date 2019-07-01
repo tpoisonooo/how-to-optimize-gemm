@@ -1,10 +1,10 @@
 #define A( i, j ) a[ (i)*lda + (j) ]
 #define B( i, j ) b[ (i)*ldb + (j) ]
-#define abs( x ) ( (x) < 0.0 ? -(x) : (x) )
 
+#include <stdlib.h>
 #include <stdio.h>
 
-float compare_matrices( int m, int n, float *a, int lda, float *b, int ldb )
+int32_t compare_matrices( int m, int n, int32_t *a, int lda, int32_t *b, int ldb )
 {
 //    printf("\n---result----\n");
 //    print_matrix(m, n, a, lda);
@@ -12,7 +12,7 @@ float compare_matrices( int m, int n, float *a, int lda, float *b, int ldb )
 //    print_matrix(m, n, b, ldb);
 //    printf("\n-------\n");
   int i, j;
-  float max_diff = 0.0, diff;
+  int max_diff = 0, diff;
   int printed = 0;
 
   for ( i=0; i<m; i++ ){
@@ -20,8 +20,8 @@ float compare_matrices( int m, int n, float *a, int lda, float *b, int ldb )
       diff = abs( A( i,j ) - B( i,j ) );
       max_diff = ( diff > max_diff ? diff : max_diff );
       if(0 == printed)
-      if(max_diff > 0.5f || max_diff < -0.5f) {
-        printf("\n error: i %d  j %d diff %f", i, j, max_diff);
+      if(max_diff != 0) {
+        printf("\n error: i %d  j %d diff %d", i, j, max_diff);
         printed = 1;
       }
     }
