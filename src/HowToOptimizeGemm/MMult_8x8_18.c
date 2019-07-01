@@ -11,8 +11,10 @@
 /* Block sizes */
 #define DEBUG_PACK_SHAPE
 #undef DEBUG_PACK_SHAPE
-#define DEBUG_PRINT_DATA
-#undef DEBUG_PRINT_DATA
+#define DEBUG_PRINT_A
+#undef DEBUG_PRINT_B
+#undef DEBUG_PRINT_A
+// #undef DEBUG_PRINT_DATA
 
 /* Create macros so that the matrices are stored in row-major order */
 
@@ -49,10 +51,10 @@ void MY_MMult(int m, int n, int k, int8_t * restrict a, int lda,
                                    int8_t * restrict b, int ldb,
                                    int8_t * restrict c, int ldc )
 {
-#ifdef DEBUG_PRINT_DATA
-    printf("\n-------\n");
+#if (defined DEBUG_PRINT_A) || (defined DEBUG_PRINT_B)
+    printf("\n--- a ----\n");
     print_int8_matrix(m, k, a, lda);
-    printf("\n-------\n");
+    printf("\n--- b ----\n");
     print_int8_matrix(k, n, b, ldb);
     printf("\n-------\n");
 #endif
@@ -84,9 +86,13 @@ void MY_MMult(int m, int n, int k, int8_t * restrict a, int lda,
             } else if(n > GEMM_N) {
                 min_n = (min_n / 2 + GEMM_UNROLL - 1) & ~(GEMM_UNROLL - 1);
             } else {
-                l1stride = 0;
+                l1stride = 1;
             }
-            // packN_8(min_k, min_n, b + ks * ldb, ldb, sb);
+            packN_8(min_k, min_n, b + ks * ldb, ldb, sb);
+#ifdef DEBUG_PRINT_B
+            printf("\n ----- sb -- k n offset -- %d %d %d \n", min_k, min_n, ks * ldb);
+            print_int8_matrix(m, k, sb, ldb);
+#endif
 
             // micro kernel, split A Block to smaller Panel
             for (mms = ms; mms < ms + min_m; mms += min_mm) {
@@ -101,9 +107,13 @@ void MY_MMult(int m, int n, int k, int8_t * restrict a, int lda,
 
                 // coninueous packA
                 packZ_8(min_mm, min_k, a + mms * lda + ks, lda, sa + min_k * (mms - ms) * l1stride);
+#ifdef DEBUG_PRINT_A
+                printf("\n ----- sa --m k  %d %d-- \n", mms - ms, min_k);
+                print_int8_matrix(m, k, sa, lda);
+#endif
 
                 // KERNEL_8x8(min_mm, min_n, min_k, sa + l1stride * min_k * (mms - ms), sb, c + mms * ldc, ldc);
-#ifdef DEBUG_PRINT_DATA
+#ifdef DEBUG_PRINT_C
                 printf("\n---first kernel----\n");
                 print_int32_matrix(m, n, c, ldc);
 #endif
@@ -118,10 +128,14 @@ void MY_MMult(int m, int n, int k, int8_t * restrict a, int lda,
                     min_n = (min_n / 2 + GEMM_UNROLL - 1) & ~(GEMM_UNROLL - 1);
                 }
 
-                // packN_8(min_k, min_n, b + ns + ldb * ks, ldb, sb);
+                packN_8(min_k, min_n, b + ns + ldb * ks, ldb, sb);
+#ifdef DEBUG_PRINT_B
+                printf("\n ----- sb -- k n offset -- %d %d %d\n", min_k, min_n, ks * ldb + ns);
+                print_int8_matrix(m, k, sb, ldb);
+#endif
                 // KERNEL_8x8(min_m, min_n, min_k, sa, sb, c + ms * ldc + ns, ldc);
 
-#ifdef DEBUG_PRINT_DATA
+#ifdef DEBUG_PRRINT_C
                 printf("\n----second kernel---\n");
                 print_int32_matrix(m, n, c, ldc);
 #endif
@@ -181,51 +195,181 @@ void packZ_8(int m, int k, int8_t* from, int lda, int8_t* to) {
     printf("\n packZ_8, m=%d, k=%d", m, k);
 #endif
     // TODO to be optimize
-    int i, j;
-    int kk;
+    int i, repeat;
+    int col, proc_col;
     int8_t * a_offset = from;
     int8_t * a_offset1 = a_offset;
 
-#if 1
-    for(int shift = 3; shift >= 0; --shift) {
+    int shift = 3;
+    while (m > 0) {
+        assert(shift >= 0);
         i = m >> shift;
+        const int proc_row = i << shift;
         while (i > 0) {
-            --i;
-            kk = k;
+            col = k;
 
             // proc 8x col
-            j = kk >> 3;
-            packZ_sub(a_offset1, lda, to, i << shift, 8, j);
-            a_offset1 += 8 * j;
-            to += 64 * j;
-            kk -= (j << 3);
+            repeat = col >> 3;
+            proc_col = repeat << 3;
+
+            packZ_sub(a_offset1, lda, to, proc_row, 8, repeat);
+            a_offset1 += proc_col;
+            to += proc_row * proc_col;
+            col -= proc_col;
 
             // proc 4x col
-            j = kk >> 2;
-            packZ_sub(a_offset1, lda, to, i << shift, 4, j); 
-            a_offset1 += 4 * j;
-            to += 32 * j;
-            kk -= (j << 2);
+            repeat = col >> 2;
+            proc_col = repeat << 2;
+
+            packZ_sub(a_offset1, lda, to, proc_row, 4, repeat); 
+            a_offset1 += proc_col;
+            to += proc_row * proc_col;
+            col -= proc_col;
 
             // proc 2x col
-            j = kk >> 1;
-            packZ_sub(a_offset1, lda, to, i << shift, 2, j);
-            a_offset1 += 2 * j;
-            to += 16 * j;
-            kk -= (j << 1);
+            repeat = col >> 1;
+            proc_col = repeat << 1;
 
-            j = kk;
-            packZ_sub(a_offset1, lda, to, i << shift, 1, j);
-            a_offset1 += j;
-            to += 8 * j;
-            kk -= (j);
+            packZ_sub(a_offset1, lda, to, proc_row, 2, repeat);
+            a_offset1 += proc_col;
+            to += proc_row * proc_col;
+            col -= proc_col;
+
+
+            // prco 1x col
+            packZ_sub(a_offset1, lda, to, proc_row, 1, col);
+            a_offset1 += col;
+            to += proc_row * col;
+
+            --i;
         };
-        m -= (i << shift);
-        a_offset = from + (i << shift) * lda;
+        a_offset += ((m >> shift) << shift) * lda;
         a_offset1 = a_offset;
+        m -= ((m >> shift) << shift);
+        --shift;
     }
 
-#else
+}
+
+void packN_sub(int8_t * restrict from, int ldb, int8_t * restrict to, int m, int n, int repeat) {
+    int8_t *ctemp[8] = {0};
+    
+    for (int r = 0; r < repeat; ++r) {
+
+        if (m == 1) {
+            ctemp[0] = from;
+        } else if (m == 2) {
+            ctemp[0] = from;
+            ctemp[1] = from + ldb;
+        } else if (m == 4) {
+            ctemp[0] = from;
+            ctemp[1] = from + ldb;
+            ctemp[2] = from + 2 * ldb;
+            ctemp[3] = from + 3 * ldb;
+        } else if (m == 8) {
+            ctemp[0] = from;
+            ctemp[1] = from + ldb;
+            ctemp[2] = from + 2 * ldb;
+            ctemp[3] = from + 3 * ldb;
+            ctemp[4] = from + 4 * ldb;
+            ctemp[5] = from + 5 * ldb;
+            ctemp[6] = from + 6 * ldb;
+            ctemp[7] = from + 7 * ldb;
+        } else {
+            assert(0);
+        }
+
+        for (int i = 0; i < n; ++i) {
+            if (m == 1) {
+                to[0] = ctemp[0][i];
+            } else if (m == 2) {
+                to[0] = ctemp[0][i];
+                to[1] = ctemp[1][i];
+            } else if (m == 4) {
+                to[0] = ctemp[0][i];
+                to[1] = ctemp[1][i];
+                to[2] = ctemp[2][i];
+                to[3] = ctemp[3][i];
+            } else if (m == 8) {
+                to[0] = ctemp[0][i];
+                to[1] = ctemp[1][i];
+                to[2] = ctemp[2][i];
+                to[3] = ctemp[3][i];
+                to[4] = ctemp[4][i];
+                to[5] = ctemp[5][i];
+                to[6] = ctemp[6][i];
+                to[7] = ctemp[7][i];
+            } else {
+                assert(0);
+            }
+            to += m;
+        }
+        from += ldb * m;
+    }
+}
+
+void packN_8(int k, int n, int8_t* from, int ldb, int8_t* to) {
+#ifdef DEBUG_PACK_SHAPE
+    printf("\n packN_8, k=%d, n=%d", k, n);
+#endif
+
+    int i, repeat;
+    int row;
+    int proc_row;
+
+    int8_t *a_offset = from;
+    int8_t *a_offset1 = a_offset;
+
+    int shift = 3;
+    while (n > 0) {
+        assert(shift >= 0);
+        i = n >> shift;
+        const int proc_col = i << shift;
+        while (i > 0) {
+            row = k;
+
+            // proc 8x row
+            repeat = row >> 3;
+            proc_row = repeat << 3;
+            packN_sub(a_offset1, ldb, to, 8, proc_col, repeat);
+            a_offset1 += proc_row * ldb;
+            to += proc_row * proc_col;
+            row -= proc_row;
+
+            // proc 4x row
+            repeat = row >> 2;
+            proc_row = repeat << 2;
+            packN_sub(a_offset1, ldb, to, 4, proc_col, repeat); 
+            a_offset1 += proc_row * ldb;
+            to += proc_row * proc_col;
+            row -= proc_row;
+
+            // proc 2x row
+            repeat = row >> 1;
+            proc_row = repeat << 1;
+            packN_sub(a_offset1, ldb, to, 2, proc_col, repeat);
+            a_offset1 += proc_row * ldb;
+            to += proc_row * proc_col;
+            row -= proc_row;
+
+            // proc 1x row
+            repeat = row;
+            proc_row = repeat;
+            packN_sub(a_offset1, ldb, to, 1, proc_col, repeat);
+            a_offset1 += proc_row * ldb;
+            to += proc_col * row;
+            row -= proc_row;
+
+            --i;
+        };
+        a_offset += ((n >> shift) << shift);
+        a_offset1 = a_offset;
+        n -= ((n >> shift) << shift);
+        --shift;
+    }
+}
+
+#if 0
     i = m >> 3;
     while(i > 0){
     // proc 8x row
@@ -374,111 +518,3 @@ void packZ_8(int m, int k, int8_t* from, int lda, int8_t* to) {
     a_offset = from + i * lda;
     a_offset1 = a_offset;
 #endif
-}
-
-void packN_sub(int8_t *from, int ldb, int8_t *to, int m, int n, int repeat) {
-    int8_t *ctemp[8] = {0};
-    
-    for (int r = 0; r < repeat; ++r) {
-
-        if (m == 1) {
-            ctemp[0] = from;
-        } else if (m == 2) {
-            ctemp[0] = from;
-            ctemp[1] = from + ldb;
-        } else if (m == 4) {
-            ctemp[0] = from;
-            ctemp[1] = from + ldb;
-            ctemp[2] = from + 2 * ldb;
-            ctemp[3] = from + 3 * ldb;
-        } else if (m == 8) {
-            ctemp[0] = from;
-            ctemp[1] = from + ldb;
-            ctemp[2] = from + 2 * ldb;
-            ctemp[3] = from + 3 * ldb;
-            ctemp[4] = from + 4 * ldb;
-            ctemp[5] = from + 5 * ldb;
-            ctemp[6] = from + 6 * ldb;
-            ctemp[7] = from + 7 * ldb;
-        } else {
-            assert(0);
-        }
-
-        for (int i = 0; i < n; ++i) {
-            if (m == 1) {
-                to[0] = ctemp[0][i];
-            } else if (m == 2) {
-                to[0] = ctemp[0][i];
-                to[1] = ctemp[1][i];
-            } else if (m == 4) {
-                to[0] = ctemp[0][i];
-                to[1] = ctemp[1][i];
-                to[2] = ctemp[2][i];
-                to[3] = ctemp[3][i];
-            } else if (m == 8) {
-                to[0] = ctemp[0][i];
-                to[1] = ctemp[1][i];
-                to[2] = ctemp[2][i];
-                to[3] = ctemp[3][i];
-                to[4] = ctemp[4][i];
-                to[5] = ctemp[5][i];
-                to[6] = ctemp[6][i];
-                to[7] = ctemp[7][i];
-            } else {
-                assert(0);
-            }
-            to += m;
-        }
-        from += ldb * m;
-    }
-}
-
-void packN_8(int k, int n, int8_t* from, int ldb, int8_t* to) {
-#ifdef DEBUG_PACK_SHAPE
-    printf("\n packN_8, k=%d, n=%d", k, n);
-#endif
-
-    int i, j;
-    int kk = k;
-
-    int8_t *a_offset = from;
-    int8_t *a_offset1 = a_offset;
-
-    for(int shift = 3; shift >= 0; --shift) {
-        i = n >> shift;
-        while (i > 0) {
-            --i;
-            kk = k;
-
-            // proc 8x col
-            j = kk >> 3;
-            packN_sub(a_offset1, ldb, to, 8, i << shift, j);
-            a_offset1 += 8 * ldb * j;
-            to += 64 * j;
-            kk -= (j << 3);
-
-            // proc 4x col
-            j = kk >> 2;
-            packN_sub(a_offset1, ldb, to, 4, i << shift, j); 
-            a_offset1 += 4 * ldb * j;
-            to += 32 * j;
-            kk -= (j << 2);
-
-            // proc 2x col
-            j = kk >> 1;
-            packN_sub(a_offset1, ldb, to, 2, i << shift, j);
-            a_offset1 += 2 * ldb * j;
-            to += 16 * j;
-            kk -= (j << 1);
-
-            j = kk;
-            packN_sub(a_offset1, ldb, to, 1, i << shift, j);
-            a_offset1 += 1 * ldb * j;
-            to += 8 * j;
-            kk -= (j);
-        };
-        n -= (i << shift);
-        a_offset = from + (i << shift);
-        a_offset1 = a_offset;
-    }
-}
