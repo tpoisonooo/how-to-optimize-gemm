@@ -16,6 +16,6 @@ void random_int8_matrix( int m, int n, int8_t *a, int lda )
 #if 0 
       A( i,j ) = 2.0 * (float)drand48( ) - 1.0;
 #else
-      A( i, j) = val++;
+      A( i, j) = (i-j) % 2;
 #endif
 }
