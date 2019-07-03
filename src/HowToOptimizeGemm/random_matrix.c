@@ -10,12 +10,14 @@ void random_int8_matrix( int m, int n, int8_t *a, int lda )
 {
   double drand48();
   int i,j;
-  int8_t val = 0;
-  for ( i=0; i<m; i++ )
-    for ( j=0; j<n; j++ )
-#if 0 
-      A( i,j ) = 2.0 * (float)drand48( ) - 1.0;
+  int val = 0;
+  for ( i=0; i<m; i++ ) {
+    for ( j=0; j<n; j++ ) {
+#if 1 
+      a[i * lda + j] = (int8_t)val;
+      val ++;      
 #else
-      A( i, j) = (i-j) % 2;
 #endif
+    }
+  }
 }

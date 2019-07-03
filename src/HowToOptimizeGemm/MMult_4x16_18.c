@@ -16,7 +16,7 @@
 #define DEBUG_PRINT_B
 #define DEBUG_PRINT_C
 #undef DEBUG_PRINT_B
-#undef DEBUG_PRINT_A
+// #undef DEBUG_PRINT_A
 // #undef DEBUG_PRINT_DATA
 
 /* Create macros so that the matrices are stored in row-major order */
@@ -59,7 +59,7 @@ void MY_MMult(int m, int n, int k, int8_t * restrict a, int lda,
                                    int8_t * restrict b, int ldb,
                                    int32_t * restrict c, int ldc )
 {
-#if (defined DEBUG_PRINT_A) || (defined DEBUG_PRINT_B)
+#if (defined DEBUG_PRINT_A) || (defined DEBUG_PRINT_B || defined DEBUG_PRINT_C)
     printf("\n--- a ----\n");
     print_int8_matrix(m, k, a, lda);
     printf("\n--- b ----\n");
@@ -206,6 +206,7 @@ void kernel_sub_v1(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int
     } 
 }
 
+// get c[m, n] output
 void kernel_mn(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int ldc) {
     //sum_all( A4xsubk * Bsubkx4 )
     int8_t *a = sa, *b = sb;
@@ -223,6 +224,7 @@ void kernel_mn(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int ldc
     }
 }
 
+// proc m lines
 void kernel_m(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int ldc) {
     // m == 4
     int nn = n;
@@ -231,21 +233,21 @@ void kernel_m(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int ldc)
 
     while(nn >= 4) {
         kernel_mn(m, 4, k, sa, b, c, ldc);
-        b += 4;
+        b += 4 * ldc;
         c += 4;        
         nn -= 4;
     };
 
     while(nn >= 2) {
         kernel_mn(m, 2, k, sa, b, c, ldc);
-        b += 2;
+        b += 2 * ldc;
         c += 2;        
         nn -= 2;
     };
 
     while(nn >= 1) {
         kernel_mn(m, 1, k, sa, b, c, ldc);
-        b += 1;
+        b += 1 * ldc;
         c += 1;
         nn -= 1;
     }
@@ -349,6 +351,7 @@ void packZ_16(int m, int k, int8_t* from, int lda, int8_t* to) {
             a_offset1 += col;
             c += proc_row * col;
 
+            a_offset1 += (proc_row - 1) * lda;
             --i;
         };
         a_offset += ((m >> shift) << shift) * lda;

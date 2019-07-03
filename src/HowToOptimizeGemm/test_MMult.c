@@ -14,13 +14,17 @@ int32_t compare_matrices( int, int, int32_t *, int, int32_t *, int );
 
 double dclock();
 
-int main()
+int main(int argc, char** argv)
 {
   int 
     p, 
     m, n, k,
     lda, ldb, ldc, 
     rep;
+
+  int argM = -1,
+      argN = -1,
+      argK = -1;
 
   double 
     dtime, dtime_best,        
@@ -34,20 +38,30 @@ int main()
 
   int32_t
     *c, *cref, *cold;    
+
+  if (argc > 1) {
+    if (argc < 4) {
+      printf("Usage: ./test_MMult.x M N K  or ./test_MMult.x");
+      exit(-1);
+    }
+    argM = atoi(argv[1]);
+    argN = atoi(argv[2]);
+    argK = atoi(argv[3]);
+  }
   
   printf( "MY_MMult = [\n" );
     
   for ( p=PFIRST; p<=PLAST; p+=PINC ){
-    m = ( M == -1 ? p : M );
-    n = ( N == -1 ? p : N );
-    k = ( K == -1 ? p : K );
+    m = ( argM == -1 ? p : argM );
+    n = ( argN == -1 ? p : argN );
+    k = ( argK == -1 ? p : argK );
 
     gflops = 2.0 * m * n * k * 1.0e-09;
 
-    lda = ( LDA == -1 ? m : LDA );
-    ldb = ( LDB == -1 ? k : LDB );
-    ldc = ( LDC == -1 ? m : LDC );
-
+    lda = k;
+    ldb = n;
+    ldc = n;
+    
     /* Allocate space for the matrices */
     /* Note: I create an extra column in A to make sure that
        prefetching beyond the matrix does not cause a segfault */
