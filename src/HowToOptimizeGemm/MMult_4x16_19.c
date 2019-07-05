@@ -228,8 +228,33 @@ void kernel_sub_v1(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int
     } 
 }
 
+extern void kernel_sub_m4n4k16(int8_t *sa, int8_t *sb, int32_t *sc, int ldc);
+
+static void kernel_sub_v2(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int ldc) {
+    if (4 == m && 4 == n && k==16) {
+        kernel_sub_m4n4k16(int8_t *sa, int8_t *sb, int32_t *sc, int ldc);
+        return;
+    }
+
+    int8_t *a = sa;
+    int32_t *c = sc;
+    for (int i = 0; i < m; ++i) {
+        int8_t *b = sb; 
+
+        for (int j = 0; j < n; ++j) {
+            
+            for (int x = 0; x < k; ++x) {
+                c[j] += (int32_t)(a[x]) * b[x];
+            }
+            b += k;            
+        }
+        a += k;
+        c += ldc;
+    } 
+}
+
 // get c[m, n] output
-void kernel_mn(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int ldc) {
+static void kernel_mn(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int ldc) {
     //sum_all( A4xsubk * Bsubkx4 )
     int8_t *a = sa, *b = sb;
     int shift = 4;
@@ -237,7 +262,7 @@ void kernel_mn(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int ldc
         int repeat = k >> shift;
         int step = 1 << shift;
         for (int i = 0; i < repeat; ++i) {
-            kernel_sub_v1(m, n, step, a, b, sc, ldc);
+            kernel_sub_v2(m, n, step, a, b, sc, ldc);
             a += m * step;
             b += n * step; 
         }
