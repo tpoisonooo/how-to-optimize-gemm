@@ -7,11 +7,11 @@
 void print_int32_matrix( int m, int n, int32_t *a, int lda );
 int32_t compare_matrices( int m, int n, int32_t *a, int lda, int32_t *b, int ldb )
 {
-printf("\n---result----\n");
-print_int32_matrix(m, n, a, lda);
-printf("\n---baseline----\n");
-print_int32_matrix(m, n, b, ldb);
-printf("\n-------\n");
+//printf("\n---result----\n");
+//print_int32_matrix(m, n, a, lda);
+//printf("\n---baseline----\n");
+//print_int32_matrix(m, n, b, ldb);
+//printf("\n-------\n");
   int i, j;
   int max_diff = 0, diff;
   int printed = 0;

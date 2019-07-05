@@ -6,7 +6,7 @@
 #include "parameters.h"
 
 void REF_MMult(int, int, int, int8_t*, int, int8_t *, int, int32_t *, int );
-void MY_MMult(int, int, int, int8_t *, int, int8_t *, int, int32_t *, int );
+void MY_MMult(int, int, int, int8_t *, int, int8_t *, int, int32_t *, int, double*, double*, double*);
 void copy_int8_matrix(int, int, int8_t *, int, int8_t *, int );
 void copy_int32_matrix(int, int, int32_t *, int, int32_t *, int );
 void random_int8_matrix(int, int, int8_t *, int);
@@ -29,6 +29,9 @@ int main(int argc, char** argv)
   double 
     dtime, dtime_best,        
     gflops;
+
+  double
+    packZ, packN, kernel;
 
   int32_t
     diff;
@@ -85,13 +88,14 @@ int main(int argc, char** argv)
     REF_MMult( m, n, k, a, lda, b, ldb, cref, ldc );
 
     /* Time the "optimized" implementation */
+    packZ = packN = kernel = 0.0;
     for ( rep=0; rep<NREPEATS; rep++ ){
       copy_int32_matrix( m, n, cold, ldc, c, ldc );
 
       /* Time your implementation */
       dtime = dclock();
 
-      MY_MMult( m, n, k, a, lda, b, ldb, c, ldc );
+      MY_MMult( m, n, k, a, lda, b, ldb, c, ldc, &packZ, &packN, &kernel);
       
       dtime = dclock() - dtime;
 
@@ -106,7 +110,9 @@ int main(int argc, char** argv)
         exit(0);
     }
 
-    printf( "%d %le %d \n", p, gflops / dtime_best, diff );
+    printf( "%d %0.3lf %d \n", p, gflops / dtime_best, diff );
+    double sum = packZ + packN + kernel;
+    printf( "timecost: %0.2f %0.2lf %0.2lf \n", packZ/sum, packN/sum, kernel/sum);
     fflush( stdout );
 
     free( a );
