@@ -2,6 +2,7 @@
 .align 5
 .global kernel_sub_m4n4k16
 
+kernel_sub_m4n4k16:
 // x0: sa
 // x1: sb
 // x2: sc

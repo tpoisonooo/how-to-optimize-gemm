@@ -232,7 +232,7 @@ extern void kernel_sub_m4n4k16(int8_t *sa, int8_t *sb, int32_t *sc, int ldc);
 
 static void kernel_sub_v2(int m, int n, int k, int8_t *sa, int8_t *sb, int32_t *sc, int ldc) {
     if (4 == m && 4 == n && k==16) {
-        kernel_sub_m4n4k16(int8_t *sa, int8_t *sb, int32_t *sc, int ldc);
+        kernel_sub_m4n4k16(sa, sb, sc, ldc * sizeof(ldc));
         return;
     }
 

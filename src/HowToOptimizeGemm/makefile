@@ -16,13 +16,14 @@ UTIL       := copy_matrix.o \
               random_matrix.o \
               dclock.o \
               REF_MMult.o \
-              print_matrix.o
+              print_matrix.o \
+              kernel_m4n4k16.o
 
 TEST_OBJS  := test_MMult.o $(NEW).o 
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-%.o: %.c
+%.o: %.S
 	$(CC) $(CFLAGS) -c $< -o $@
 
 all: 
