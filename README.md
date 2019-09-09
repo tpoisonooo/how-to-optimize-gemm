@@ -13,12 +13,12 @@ RowMajor gemm optimization
 本系列优化中文教程在
 
 1. [知乎 GEMM 入门](https://zhuanlan.zhihu.com/p/65436463)
-2. [知乎 GEMM caching](https://zhuanlan.zhihu.com/p/69700540)
+2. [知乎 GEMM caching](https://zhuanlan.zhihu.com/p/69700540) (最后一节增加了理论支撑哦)
 
 
 ## int8 gemm
 分块后的 sub kernel 目前已知有 3 种实现方法，[chgemm](https://github.com/tpoisonooo/chgemm) 是个可用的 int8 gemm 库。相对于本教程中的代码，区别在于:
 
 1. 处理了边界问题，不像教程里只考虑尺寸为 4 的倍数的情况;
-2. 此方法理论上限 gflops 不高，完全实现后只有 7 gflops（rk3399）。~~是我在寻找最优解法过程中的一次尝试，仅供学习参考~~ 本座打算好好优化这个鬼东西；
+2. ~~此方法理论上限 gflops 不高，完全实现后只有 7 gflops（rk3399）。是我在寻找最优解法过程中的一次尝试，仅供学习参考~~ 本座打算好好优化这个鬼东西；
 3. 基于对称量化原理，输入数值范围必须在 \[-127, +127\]，不能出现 -128。
