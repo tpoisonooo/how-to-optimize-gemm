@@ -21,6 +21,6 @@ RowMajor gemm optimization
 
 [chgemm](https://github.com/tpoisonooo/chgemm) 是个可用的 int8 gemm 库。相对于本教程中的代码，区别在于:
 1. 处理了边界问题，不像教程里只考虑尺寸为 4 的倍数的情况;
-2. int8 最高达到了 17.2 gflops（相对 fp32 理论极限只有14.3，gemmlowp大约 12-14gflops）;
-3. 基于对称量化原理，输入数值范围必须在 \[-127, +127\]，不能出现 -128。
-4. 2019.10.1 左右发版~
+2. int8 最高达到了 18.6 gflops（相对 fp32 理论极限只有14.3，gemmlowp大约 12-14gflops）;
+3. 基于对称量化原理，输入数值范围必须在 \[-127, +127\]，不能出现 -128；
+4. 目前支持 armv8，armv7/Vulkan都在开发计划，欢迎 PR。
