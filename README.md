@@ -24,3 +24,5 @@ RowMajor gemm optimization
 2. int8 最高达到了 18.6 gflops（相对 fp32 理论极限只有14.3，gemmlowp大约 12-14gflops）;
 3. 基于对称量化原理，输入数值范围必须在 \[-127, +127\]，不能出现 -128；
 4. 目前支持 armv8，armv7/Vulkan都在开发计划，欢迎 PR。
+
+[chgemm](https://github.com/tpoisonooo/chgemm)已合入[ncnn](https://github/tencent/ncnn)
