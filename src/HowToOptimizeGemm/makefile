@@ -1,14 +1,14 @@
 OLD  := MMult_4x4_18
-NEW  := MMult_4x4_19
+NEW  := MMult_4x4_20
 
 #
 # sample makefile
 #
 
-CC         := gcc
+CC         := g++
 LINKER     := $(CC)
 #CFLAGS     := -O0 -g -Wall
-CFLAGS     := -std=c99 -O2 -mfpu=neon -ftree-vectorize
+CFLAGS     := -std=c++11 -O2 -march=armv7-a -mfpu=neon -ftree-vectorize
 LDFLAGS    := -lm
 
 UTIL       := copy_matrix.o \

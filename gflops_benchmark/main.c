@@ -37,6 +37,6 @@ void perf2() {
 }
 
 int main() {
-//    perf1();
+    perf1();
     perf2();
 }

@@ -212,17 +212,17 @@ Disassembly of section .text:
 	...
 
 000105e0 <func1>:
-   105e0:	f3a00140 	vmla.f32	q0, q0, d0[0]
-   105e4:	f3a22143 	vmla.f32	q1, q1, d3[0]
-   105e8:	f3a44145 	vmla.f32	q2, q2, d5[0]
-   105ec:	f3a66147 	vmla.f32	q3, q3, d7[0]
-   105f0:	e2500001 	subs	r0, r0, #1
-   105f4:	f3a88149 	vmla.f32	q4, q4, d9[0]
-   105f8:	f3aaa14b 	vmla.f32	q5, q5, d11[0]
-   105fc:	f3acc14d 	vmla.f32	q6, q6, d13[0]
-   10600:	f3aee14f 	vmla.f32	q7, q7, d15[0]
-   10604:	f3e001c1 	vmla.f32	q8, q8, d1[0]
-   10608:	f3e221c2 	vmla.f32	q9, q9, d2[0]
+   105e0:	f2000d50 	vmla.f32	q0, q0, q0
+   105e4:	f2022d52 	vmla.f32	q1, q1, q1
+   105e8:	f2044d54 	vmla.f32	q2, q2, q2
+   105ec:	f2066d56 	vmla.f32	q3, q3, q3
+   105f0:	f2088d58 	vmla.f32	q4, q4, q4
+   105f4:	f20aad5a 	vmla.f32	q5, q5, q5
+   105f8:	f20ccd5c 	vmla.f32	q6, q6, q6
+   105fc:	f20eed5e 	vmla.f32	q7, q7, q7
+   10600:	f2400df0 	vmla.f32	q8, q8, q8
+   10604:	f2422df2 	vmla.f32	q9, q9, q9
+   10608:	e2500001 	subs	r0, r0, #1
    1060c:	1afffff3 	bne	105e0 <func1>
 
 00010610 <__libc_csu_init>:
