@@ -124,51 +124,43 @@ void kernel_4x4_v3(int m, int n, int k,
 
                     "pld        [%5, #0x180]            \n"
                     "pld        [%6, #0x180]            \n"
-                    "vld1.f32   {d8}, [%6]!        \n"
-                    //"vld1.f32   d0, [%5]!        	\n"
-                    "vldr   d0, [%5]        	\n"
-
-                   // "vld1.f32   {d1}, [%5:64]!        	\n"
-		    "vldr   d1, [%5, #8]		\n"
-		    "add %5, %5, #16 		\n"
+		    "vldr	d8, [%6]		\n"
+                    "vldr   	d0, [%5]        	\n"
+		    "vldr   	d1, [%5, #8]		\n"
+		    "vldr	d9, [%6, #8]		\n"
                     "vmla.f32   q8, q0, d8[0]         \n"
-                    "vld1.f32   {d9}, [%6 :64]!        \n"
+		    "vldr       d2, [%5, #16]		\n"
                     "vmla.f32   q9, q0, d8[1]         \n"
-                    "vld1.f32   {d2}, [%5]!        \n"
-                    "vld1.f32   {d3}, [%5 :64]!        \n"
+		    "vldr       d3, [%5, #24]		\n"
                     "vmla.f32   q10, q0, d9[0]        \n"
 		    // L
-                    "vld1.f32   {d10}, [%6]!      \n"
+		    "vldr	d10, [%6, #16]		\n"
                     "vmla.f32   q11, q0, d9[1]        \n"
-
-		    "vld1.f32   {d11}, [%6 :64]!      \n"
+		    "vldr	d11, [%6, #24]		\n"
                     "vmla.f32   q8, q1, d10[0]        \n"
-                    "vld1.f32   {d4}, [%5]!        \n"
-
+		    "vldr       d4, [%5, #32]		\n"
                     "vmla.f32   q9, q1, d10[1]        \n"
 		    // L
-
-                    "vld1.f32   {d5}, [%5 :64]!        \n"
-
+		    "vldr       d5, [%5, #40]		\n"
                     "vmla.f32   q10, q1, d11[0]       \n"
-                    "vld1.f32   {d12}, [%6]!      \n"
+		    "vldr	d12, [%6, #32]		\n"
                     "vmla.f32   q11, q1, d11[1]       \n"
-
-                    "vld1.f32   {d13}, [%6 :64]!      \n"
-
+		    "vldr	d13, [%6, #40]		\n"
                     "vmla.f32   q8, q2, d12[0]        \n"
 		    // L
-                    "vld1.f32   {d6}, [%5]!        \n"
+		    "vldr       d6, [%5, #48]		\n"
                     "vmla.f32   q9, q2, d12[1]        \n"
-                    "vld1.f32   {d7}, [%5 :64]!        \n"
+		    "vldr       d7, [%5, #56]		\n"
                     "vmla.f32   q10, q2, d13[0]       \n"
-                    "vld1.f32   {d14}, [%6]!      \n"
+		    "add        %5, %5, #64		\n"
+		    "vldr	d14, [%6, #48]		\n"
                     "vmla.f32   q11, q2, d13[1]       \n"
 		    // L
 
                     "vmla.f32   q8, q3, d14[0]        \n"
-                    "vld1.f32   {d15}, [%6 :64]!      \n"
+		    "vldr	d15, [%6, #56]		\n"
                     "vmla.f32   q9, q3, d14[1]        \n"
+		    "add	%6, %6, #64		\n"
                     "vmla.f32   q10, q3, d15[0]       \n"
                     "vmla.f32   q11, q3, d15[1]       \n"
 
