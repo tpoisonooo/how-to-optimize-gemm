@@ -14,6 +14,7 @@ RowMajor gemm optimization
 
 1. [知乎 GEMM 入门](https://zhuanlan.zhihu.com/p/65436463)
 2. [知乎 GEMM caching](https://zhuanlan.zhihu.com/p/69700540) (最后一节增加了理论支撑哦)
+3. [ARMv7 4x4kernel 懒人优化小实践](https://zhuanlan.zhihu.com/p/333799799)
 
 
 ## int8 gemm
