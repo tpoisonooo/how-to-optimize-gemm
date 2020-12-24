@@ -1,6 +1,22 @@
 # how-to-optimize-gemm
 RowMajor gemm optimization
 
+## 编译和运行
+
+1. 准备 armv7/aarch64 linux 开发环境，树莓派/rk3399/aws arm server 都可以。
+2. clone 代码后，修改`makefile`的`OLD`和`NEW`。首次运行需要改成同一个代码版本，例如
+```
+OLD    := MMult_4x4_8
+NEW   := MMult_4x4_8
+```
+
+3. 默认情况下`ARCH := native`。直接编译运行即可
+```
+make run
+```
+
+4. gflops 结果在对应`.m` 文件，用`plot.py`可绘制相关折线图。
+
 ## fp32 gemm
 此项目基于 [blis-lab](https://github.com/flame/blislab) 文档和[项目](https://github.com/flame/how-to-optimize-gemm)实现，与原作区别在于：
 
@@ -24,6 +40,5 @@ RowMajor gemm optimization
 1. 处理了边界问题，不像教程里只考虑尺寸为 4 的倍数的情况;
 2. int8 最高达到了 18.6 gflops（相对 fp32 理论极限只有14.3，gemmlowp大约 12-14gflops）;
 3. 基于对称量化原理，输入数值范围必须在 \[-127, +127\]，不能出现 -128；
-4. 目前支持 armv8，armv7/Vulkan都在开发计划，欢迎 PR。
 
 [chgemm](https://github.com/tpoisonooo/chgemm)已合入[ncnn](https://github.com/tencent/ncnn) INT8 卷积。
