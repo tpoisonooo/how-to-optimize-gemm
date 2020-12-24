@@ -64,12 +64,12 @@ float *fastMalloc(int size) {
   void *ptr = 0;
   int iRet = posix_memalign(&ptr, 64, size * sizeof(float));
   assert(0 == iRet);
-  return ptr;
+  return (float*)ptr;
 }
 
 /* Suppose that m%4==0 and n%4==0 and k%4==0, avoiding process boundary !! */
-void MY_MMult(int m, int n, int k, float *restrict a, int lda,
-              float *restrict b, int ldb, float *restrict c, int ldc) {
+void MY_MMult(int m, int n, int k, float *a, int lda,
+              float *b, int ldb, float *c, int ldc) {
 #ifdef DEBUG_PRINT_DATA
   printf("\n-------\n");
   print_matrix(m, k, a, lda);
@@ -77,8 +77,8 @@ void MY_MMult(int m, int n, int k, float *restrict a, int lda,
   print_matrix(k, n, b, ldb);
   printf("\n-------\n");
 #endif
-  float *restrict sa = fastMalloc(m * k);
-  float *restrict sb = fastMalloc(k * n);
+  float *sa = fastMalloc(m * k);
+  float *sb = fastMalloc(k * n);
 
   int ms, mms, ns, ks;
   int min_m, min_mm, min_n, min_k;
