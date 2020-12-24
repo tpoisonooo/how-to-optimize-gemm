@@ -1,7 +1,8 @@
 OLD  := MMult_4x4_18
 NEW  := MMult_4x4_18
 # ARCH := armv7-a
-ARCH := aarch64
+# ARCH := aarch64
+ARCH := native
 
 #
 # sample makefile
