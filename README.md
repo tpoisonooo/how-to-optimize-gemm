@@ -42,3 +42,7 @@ make run
 3. 基于对称量化原理，输入数值范围必须在 \[-127, +127\]，不能出现 -128；
 
 [chgemm](https://github.com/tpoisonooo/chgemm)已合入[ncnn](https://github.com/tencent/ncnn) INT8 卷积。
+
+## cuda 版本
+
+切换到  [cuda](https://github.com/tpoisonooo/how-to-optimize-gemm/tree/cuda) 分支。
