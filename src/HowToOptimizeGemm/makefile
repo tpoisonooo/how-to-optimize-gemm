@@ -1,18 +1,17 @@
-OLD  := MMult_4x4_18
-NEW  := MMult_4x4_18
-# ARCH := armv7-a
-# ARCH := aarch64
-ARCH := native
+OLD  := MMult_cuBLAS_1
+NEW  := MMult_cuBLAS_1
+SMS ?= 35 37 50 52 60 61 70 75 86
 
 #
 # sample makefile
 #
 
-CC         := g++
+CC         := nvcc 
 LINKER     := $(CC)
 #CFLAGS     := -O0 -g -Wall
-CFLAGS     := -std=c++11 -O3 -march=$(ARCH) -mfpu=neon -ftree-vectorize
-LDFLAGS    := -lm
+$(foreach sm,$(SMS),$(eval GENCODE_FLAGS += -gencode arch=compute_$(sm),code=sm_$(sm)))
+CFLAGS     := -std=c++11 -O3
+LDFLAGS    := -lm  -lcublas
 
 UTIL       := copy_matrix.o \
               compare_matrices.o \
@@ -24,9 +23,7 @@ UTIL       := copy_matrix.o \
 TEST_OBJS  := test_MMult.o $(NEW).o 
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(GENCODE_FLAGS)  -c $< -o $@
 
 all: 
 	make clean;
