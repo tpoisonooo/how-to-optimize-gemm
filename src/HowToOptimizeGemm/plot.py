@@ -3,12 +3,14 @@ import matplotlib.pyplot as plt
 
 def readFile(filename):
     f = open(filename)
-    sizes = [40]
-    times = [0.0]
+    sizes = []
+    times = []
     title = ''
     try:
         title = f.readline()
-        # skip 1 line
+        # skip 3 line
+        f.readline()
+        f.readline()
         f.readline()
         while True:
             line = f.readline()

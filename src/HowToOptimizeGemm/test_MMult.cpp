@@ -22,6 +22,7 @@ int main()
   // print gpu info
   cudaDeviceProp deviceProp;
   int devID = 0;
+  checkCudaErrors(cudaSetDevice(devID));
   auto error = cudaGetDeviceProperties(&deviceProp, devID);
   if (error != cudaSuccess)
   {
@@ -45,7 +46,19 @@ int main()
     *a, *b, *c, *cref, *cold;    
   
   printf( "MY_MMult = [\n" );
-    
+
+  cublasHandle_t handle;
+  checkCudaErrors(cublasCreate(&handle));
+  checkCudaErrors(cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH));
+
+  /* Time the "optimized" implementation */
+  cudaEvent_t start, stop;
+  // Allocate CUDA events that we'll use for timing
+  checkCudaErrors(cudaEventCreate(&start));
+  checkCudaErrors(cudaEventCreate(&stop));
+
+  // printf( "create Handle\n");
+
   for ( p=PFIRST; p<=PLAST; p+=PINC ){
     m = ( M == -1 ? p : M );
     n = ( N == -1 ? p : N );
@@ -74,13 +87,9 @@ int main()
     random_matrix( k, n, b, ldb );
     random_matrix( m, n, cold, ldc );
     memset(cold, 0, mem_size_C);
+    memset(cref, 0, mem_size_C);
 
-    copy_matrix( m, n, cold, ldc, cref, ldc );
-
-    /* Run the reference implementation so the answers can be compared */
-
-    REF_MMult( m, n, k, a, lda, b, ldb, cref, ldc );
-
+    /* Init device matrix*/
     float *d_A, *d_B, *d_C;
     checkCudaErrors(cudaMalloc((void **) &d_A, mem_size_A));
     checkCudaErrors(cudaMalloc((void **) &d_B, mem_size_B));
@@ -88,14 +97,13 @@ int main()
     checkCudaErrors(cudaMemcpy(d_B, b, mem_size_B, cudaMemcpyHostToDevice));
     checkCudaErrors(cudaMalloc((void **) &d_C, mem_size_C));
 
-    /* Time the "optimized" implementation */
-    cublasHandle_t handle;
-    cudaEvent_t start, stop;
 
-    checkCudaErrors(cublasCreate(&handle));
-    // Allocate CUDA events that we'll use for timing
-    checkCudaErrors(cudaEventCreate(&start));
-    checkCudaErrors(cudaEventCreate(&stop));
+    /* Run the reference implementation so the answers can be compared */
+    // printf( "init\n");
+
+    REF_MMult( m, n, k, a, lda, b, ldb, cref, ldc );
+    // printf( "benchmark\n");
+
 
     // Record the start event
     checkCudaErrors(cudaEventRecord(start, NULL));
@@ -104,6 +112,9 @@ int main()
       /* Time your implementation */
       MY_MMult(handle, m, n, k, d_A, lda, d_B, ldb, d_C, ldc );
     }
+
+    // printf( "mymmult\n");
+
 
     // Record the stop event
     checkCudaErrors(cudaEventRecord(stop, NULL));
@@ -116,19 +127,16 @@ int main()
     float msecPerMatrixMul = msecTotal / NREPEATS;
     double flopsPerMatrixMul = 2.0 * m * k * n;
     double gflops = (flopsPerMatrixMul * 1.0e-9f) / (msecPerMatrixMul / 1000.0f);
-
+    
     // copy result from device to host
     checkCudaErrors(cudaMemcpy(cold, d_C, mem_size_C, cudaMemcpyDeviceToHost));
-
-    // Destroy the handle
-    checkCudaErrors(cublasDestroy(handle));
 
     diff = compare_matrices( m, n, cold, ldc, cref, ldc );
     if(diff > 0.5f || diff < -0.5f) {
       printf("diff too big !\n");
       exit(-1);
     }
-    printf( "%d %.2f %le \n", p, gflops / dtime_best, diff );
+    printf( "%d %.2f %le \n", p, gflops, diff );
 
     free( a );
     free( b );
@@ -140,6 +148,9 @@ int main()
     checkCudaErrors(cudaFree(d_B));
     checkCudaErrors(cudaFree(d_C));
   }
+
+  // Destroy the handle
+  checkCudaErrors(cublasDestroy(handle));
 
   printf( "];\n" );
   return 0;
