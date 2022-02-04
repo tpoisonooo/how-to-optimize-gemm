@@ -8,9 +8,9 @@
 
 // CUDA and CUBLAS functions
 
-__global__ void sgemm(int m, int n, int k, float* a, int lda, float* b, int ldb, float *c, int ldc) {
-      int _m = blockIdx.x * 16 + threadIdx.x;
-      int _n = blockIdx.y * 16 + threadIdx.y;
+template<int BLOCK> __global__ void sgemm(int m, int n, int k, float* a, int lda, float* b, int ldb, float *c, int ldc) {
+      int _m = blockIdx.x * BLOCK + threadIdx.x;
+      int _n = blockIdx.y * BLOCK + threadIdx.y;
       if (_m < m and _n < n) {
             float sum = 0.f;
             for (int i = 0; i < k; ++i) {
@@ -23,9 +23,10 @@ __global__ void sgemm(int m, int n, int k, float* a, int lda, float* b, int ldb,
 void MY_MMult(cublasHandle_t handle, int m, int n, int k, float *d_A, int lda,
               float *d_B, int ldb, float *d_C, int ldc) {
 
+      constexpr int BLOCK = 16;
       // subm, subn, subk
-      dim3 block(16, 16);
-      dim3 grid((m+15)/16, (n+15)/16);
+      dim3 block(BLOCK, BLOCK);
+      dim3 grid((m+BLOCK-1)/BLOCK, (n+BLOCK-1)/BLOCK);
 
-      sgemm<<<grid, block>>>(m, n, k, d_A, lda, d_B, ldb, d_C, ldc);
+      sgemm<BLOCK><<<grid, block>>>(m, n, k, d_A, lda, d_B, ldb, d_C, ldc);
 }
