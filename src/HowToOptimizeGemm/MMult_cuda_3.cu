@@ -31,6 +31,7 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
     bshare[ty][tx] = b_ptr[ty * n + tx];
     __syncthreads();
 
+#pragma unroll
     for (int kk = 0; kk < BLOCK; ++kk) {
       sum += ashare[ty][kk] * bshare[kk][tx];
     }
