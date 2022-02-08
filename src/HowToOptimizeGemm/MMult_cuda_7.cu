@@ -9,9 +9,8 @@
 // a = mxk, b = kxn
 __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
                       float *c, int ldc) {
-                        // TODO, not finish !!!!!
-  const int tx = (threadIdx.x % 16  )* 2;
-  const int ty = (threadIdx.x / 16 ) * 2;
+  const int tx = (threadIdx.x % 16) * 2;
+  const int ty = threadIdx.x / 16 * 2;
   const int bx = blockIdx.x * 64;
   const int by = blockIdx.y * 64;
 
@@ -28,16 +27,20 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
 
   // bigger split 
   for (float *a_ptr = begin_a, *b_ptr = begin_b; a_ptr < end_a;
-       a_ptr += 64, b_ptr += 64) {
+       a_ptr += 64, b_ptr += 64*k) {
 
   #pragma unroll
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
         ashare[ty+i][tx+j] = a_ptr[(ty+i) * k + tx + j];
+        ashare[ty+i][tx+j+32] = a_ptr[(ty+i) * k + tx + j+32];
         ashare[ty+i + 32][tx+j] = a_ptr[(ty+32 + i) * k + tx + j];
+        ashare[ty+i + 32][tx+j+32] = a_ptr[(ty+32 + i) * k + tx + j+32];
 
         bshare[ty+i][tx+j] = b_ptr[(ty+i) * n + tx + j];
-        bshare[ty+i][tx+ 32 + j] = b_ptr[(ty+i) * n + tx + 32 + j];
+        bshare[ty+i][tx+j+32] = b_ptr[(ty+i) * n + tx + j+32];
+        bshare[ty+i+32][tx+j] = b_ptr[(ty+i+32) * n + tx + j];
+        bshare[ty+i+32][tx+j+32] = b_ptr[(ty+i+32) * n + tx + j+32];
       }
     }
     __syncthreads();
@@ -45,12 +48,12 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
     #pragma unroll
     for (int i = 0; i < 2; ++i) {
       for (int j = 0; j < 2; ++j) {
-          for (int subk = 0; subk < 2; ++subk) {
-            sum0[i][j] += ashare[ty+i][subk] * bshare[subk][tx+j];
-            sum1[i][j] += ashare[ty+i][subk] * bshare[subk][tx+j + 32];
-            sum2[i][j] += ashare[ty+i + 32][subk] * bshare[subk][tx+j];
-            sum3[i][j] += ashare[ty+i + 32][subk] * bshare[subk][tx+j + 32];
-          }
+        for (int subk = 0; subk < 64; ++ subk) {
+          sum0[i][j] += ashare[ty+i][subk] * bshare[subk][tx+j];
+          sum1[i][j] += ashare[ty+i][subk] * bshare[subk][tx+j+32];
+          sum2[i][j] += ashare[ty+i+32][subk] * bshare[subk][tx+j];
+          sum3[i][j] += ashare[ty+i+32][subk] * bshare[subk][tx+j+32];
+        }
       }
     }
     __syncthreads();
