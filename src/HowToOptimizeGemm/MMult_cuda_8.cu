@@ -51,25 +51,24 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
     __syncthreads();
     LOAD(1)
     SUBKERNEL(0)
-    if (a_ptr>=end_a) {
-      break;
-    }
+
     __syncthreads();
-    LOAD(0)
+    if (a_ptr < end_a) {
+      LOAD(0)
+    }
     SUBKERNEL(1)
   }
 
-    #pragma unroll
-    for (int i = 0; i < STRIDE; ++i) {
-      for (int j = 0; j < STRIDE; ++j) {
-        c[(by + ty + i) * n + bx + tx + j] = sum[i][j];
-      }
+  #pragma unroll
+  for (int i = 0; i < STRIDE; ++i) {
+    for (int j = 0; j < STRIDE; ++j) {
+      c[(by + ty + i) * n + bx + tx + j] = sum[i][j];
     }
+  }
 }
 
 void MY_MMult(cublasHandle_t handle, int m, int n, int k, float *d_A, int lda,
               float *d_B, int ldb, float *d_C, int ldc) {
-
   constexpr int BLOCK = 8;
   constexpr int STRIDE = 4; // every thread calc STRIDExSTRIDE result
   dim3 block(BLOCK, BLOCK);

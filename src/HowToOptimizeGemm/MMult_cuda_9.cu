@@ -21,16 +21,18 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
   float *begin_b = b + bx;
   float *end_a = begin_a + k;
 
-  float sum[STRIDE][STRIDE] = {0.f};
+  __shared__ __align__(16 * 1024) char smem[16 * 1024];
+  float *ashare = reinterpret_cast<float *>(smem);
+  float *bshare = reinterpret_cast<float *>(smem + 8 * 1024);
+
+  float sum[2][STRIDE][STRIDE] = {0.f};
   for (float *a_ptr = begin_a, *b_ptr = begin_b; a_ptr < end_a;
        a_ptr += STEP, b_ptr += STEP * n) {
-    __shared__ __align__(16 * 1024) float ashare[STEP][STEP];
-    __shared__ __align__(16 * 1024) float bshare[STEP][STEP];
 
     for (int i = 0; i < STRIDE; ++i) {
       for (int j = 0; j < STRIDE; ++j) {
-        ashare[ty+i][tx+j] = a_ptr[(ty+i) * k + tx + j];
-        bshare[ty+i][tx+j] = b_ptr[(ty+i) * n + tx + j];
+        ashare[(ty+i) * STEP + tx+j] = a_ptr[(ty+i) * k + tx + j];
+        bshare[(ty+i) * STEP + tx+j] = b_ptr[(ty+i) * n + tx + j];
       }
     }
     __syncthreads();
@@ -38,7 +40,7 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
     for (int i = 0; i < STRIDE; ++i) {
       for (int j = 0; j < STRIDE; ++j) {
         for (int kk = 0; kk < STEP; ++kk) {
-          sum[i][j] += ashare[ty+i][kk] * bshare[kk][tx+j];
+          sum[i][j] += ashare[(ty+i) * STEP + kk] * bshare[kk * STEP + tx+j];
         }
       }
     }
@@ -48,9 +50,11 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
 
     #pragma unroll
     for (int i = 0; i < STRIDE; ++i) {
-      for (int j = 0; j < STRIDE; ++j) {
-        c[(by + ty + i) * n + bx + tx + j] = sum[i][j];
-      }
+      auto const addr = c + (by + ty + i) * n + bx + tx;
+      asm volatile (
+        "st.v4.f32 [%0], {%1, %2, %3, %4};\n"
+        : : "r"(addr), "f"(sum[i][0]), "f"(sum[i][1]), "f"(sum[i][2]), "f"(sum[i][3])
+      );
     }
 }
 
