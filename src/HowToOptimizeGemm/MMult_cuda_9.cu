@@ -6,65 +6,125 @@
 #include <cublas_v2.h>
 #include <cuda_runtime.h>
 
-// a = mxk, b = kxn
-template <int BLOCK, int STRIDE>
-__global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
-                      float *c, int ldc) {
-  // blockIdx control subpanel matrix
-  constexpr int STEP = BLOCK * STRIDE;
-  const int tx = threadIdx.x * STRIDE;
-  const int ty = threadIdx.y * STRIDE;
-  const int bx = blockIdx.x * STEP;
-  const int by = blockIdx.y * STEP;
+// 256 threads  perblock, 2 blocks per multiprocessor
+__launch_bounds__(256, 2)
+__global__ void sgemm_128x128x8(int m, int n, int k, float *a, float *b, float *c) {
 
-  float *begin_a = a + by * k;
-  float *begin_b = b + bx;
-  float *end_a = begin_a + k;
+  #define SMEM_LDA (128)
+  #define SMEM_LDB (128)
+  __shared__  __align__(16 * 1024) char smem[16*1024]; // 16KB shared memory for buffer
+  float* ashare = reinterpret_cast<float*>(smem);
+  float* bshare = reinterpret_cast<float*>(smem + 8 * 1024);  // 8k shared mem for B
 
-  __shared__ __align__(16 * 1024) char smem[16 * 1024];
-  float *ashare = reinterpret_cast<float *>(smem);
-  float *bshare = reinterpret_cast<float *>(smem + 8 * 1024);
+  float sum[8][8] = {0};
+  const int block_offset_a = blockIdx.y * 128 * k + blockIdx.x * 128;
+  int from_a = block_offset_a + (threadIdx.x / 8) * (4 * k) + (threadIdx.x % 8);
 
-  float sum[2][STRIDE][STRIDE] = {0.f};
-  for (float *a_ptr = begin_a, *b_ptr = begin_b; a_ptr < end_a;
-       a_ptr += STEP, b_ptr += STEP * n) {
+  const int block_offset_b = blockIdx.x * 128 * n + blockIdx.y * 128;
+  int from_b = block_offset_b + (threadIdx.x / 32) * n + (threadIdx.x % 32);
 
-    for (int i = 0; i < STRIDE; ++i) {
-      for (int j = 0; j < STRIDE; ++j) {
-        ashare[(ty+i) * STEP + tx+j] = a_ptr[(ty+i) * k + tx + j];
-        bshare[(ty+i) * STEP + tx+j] = b_ptr[(ty+i) * n + tx + j];
-      }
+
+  for (int loop = 0; loop < k; loop += 8) {
+    // part1: gmem to smem
+    // load gmem to smem for ashare
+    const int to_a = (threadIdx.x % 8) * SMEM_LDA + (threadIdx.x / 8) * 4;  // 连续的地址不能给同一个 thread 用
+    #pragma unroll
+    for (int i =0; i < 4; ++i) {
+      ashare[to_a+i] = a[from_a + i]; 
     }
-    __syncthreads();
 
-    for (int i = 0; i < STRIDE; ++i) {
-      for (int j = 0; j < STRIDE; ++j) {
-        for (int kk = 0; kk < STEP; ++kk) {
-          sum[i][j] += ashare[(ty+i) * STEP + kk] * bshare[kk * STEP + tx+j];
+    // load gmem to smem for bshare
+    const int to_b = (threadIdx.x / 32) * SMEM_LDB + (threadIdx.x % 32);
+    #pragma unroll
+    for (int i = 0; i < 4; ++i) {
+      bshare[to_b + i * 32] = b[from_b + i * 32]; // 32 thread 合并访问。 thread i 访问  [i, i+32, i+64, i+96]
+    }
+
+    __syncthreads();
+    from_a += 8;
+    from_b += 8 * n;
+
+    // part2: calculation
+    // 计算 2x2 个 4x4
+    int aidx0 = (threadIdx.x / 16) * 4;
+    int bidx0 = (threadIdx.x % 16) * 4; 
+    int aidx1 = aidx0 + 64;
+    int bidx1 = bidx0 + 64;
+    #pragma unroll
+    for (int subk = 0; subk < 8; ++subk) {
+      for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+          sum[i][j] += ashare[aidx0 + i + subk * SMEM_LDA]* bshare[bidx0+j + subk * SMEM_LDB];
         }
       }
     }
 
-    __syncthreads();
-  }
+    #pragma unroll
+    for (int subk = 0; subk < 8; ++subk) {
+      for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+          sum[i][j+4] += ashare[aidx0 + i + subk * SMEM_LDA]* bshare[bidx1+j + subk * SMEM_LDB];
+        }
+      }
+    }
 
     #pragma unroll
-    for (int i = 0; i < STRIDE; ++i) {
-      auto const addr = c + (by + ty + i) * n + bx + tx;
-      asm volatile (
-        "st.v4.f32 [%0], {%1, %2, %3, %4};\n"
-        : : "r"(addr), "f"(sum[i][0]), "f"(sum[i][1]), "f"(sum[i][2]), "f"(sum[i][3])
-      );
+    for (int subk = 0; subk < 8; ++subk) {
+      for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+          sum[i+4][j] += ashare[aidx1 + i + subk * SMEM_LDA]* bshare[bidx0+j + subk * SMEM_LDB];
+        }
+      }
     }
+
+    #pragma unroll
+    for (int subk = 0; subk < 8; ++subk) {
+      for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+          sum[i+4][j+4] += ashare[aidx1 + i + subk * SMEM_LDA]* bshare[bidx1+j + subk * SMEM_LDB];
+        }
+      }
+    }
+  }
+
+  #undef SMEM_LDA
+  #undef SMEM_LDB
+
+  // part3: save to C
+  int write_offset = (blockIdx.y * 128 + (threadIdx.x % 16) * 4)* n + blockIdx.x * 128 + (threadIdx.x / 16) * 4;
+  #pragma unroll
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      c[write_offset + i * n + j] = sum[i][j]; 
+    }
+  }
+  #pragma unroll
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      c[write_offset + i * n + j + 64] = sum[i][j+4]; 
+    }
+  }
+
+  #pragma unroll
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      c[write_offset + (i+64) * n + j] = sum[i+4][j]; 
+    }
+  }
+
+  #pragma unroll
+  for (int i = 0; i < 4; ++i) {
+    for (int j = 0; j < 4; ++j) {
+      c[write_offset + (i+64) * n + j + 64] = sum[i+4][j+4]; 
+    }
+  }
 }
 
 void MY_MMult(cublasHandle_t handle, int m, int n, int k, float *d_A, int lda,
               float *d_B, int ldb, float *d_C, int ldc) {
 
-  constexpr int BLOCK = 8;
-  constexpr int STRIDE = 4; // every thread calc STRIDExSTRIDE result
-  dim3 block(BLOCK, BLOCK);
-  dim3 grid((m + BLOCK - 1) / BLOCK / STRIDE, (n + BLOCK - 1) / BLOCK /  STRIDE);
+  constexpr int BLOCK = 128;
+  dim3 grid((m + BLOCK - 1) / BLOCK, (n + BLOCK - 1) / BLOCK);
 
-  sgemm<BLOCK, STRIDE><<<grid, block>>>(m, n, k, d_A, lda, d_B, ldb, d_C, ldc);
+  sgemm_128x128x8<<<grid, 256>>>(m, n, k, d_A, d_B, d_C);
 }
