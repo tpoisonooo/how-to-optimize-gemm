@@ -7,14 +7,6 @@
 #include <cuda_runtime.h>
 
 // 256 threads  perblock, 2 blocks per multiprocessor
-/**
- * version 9 的特点是 gmem->smem 过程中用了 GPU 喜欢 interleave 的特性。
- * 
- * 标准的 GEMM 里 matrixA 是要 transpose 的，thread 加载 gmem 的 4行1列 个数据，放到 smem 里是 1x4，32x8 个线程加载 256x8 大小的 subA，变成  8x256
- * 
- * matrixB 不 tranpose，就是单纯的加载。32 thread 合并访问。 thread i 访问  [i, i+32, i+64, i+96]
- * 
- */
 __global__ __launch_bounds__(256, 2)
 void sgemm_128x128x8(int m, int n, int k, const float *a, const float *b, float *c) {
 
