@@ -26,25 +26,25 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
   float sum[STRIDE][STRIDE] = {0.f};
   float *a_ptr = begin_a, *b_ptr = begin_b;
 
-  #define LOAD(IDX) \
-  do{\
-    for (int i = 0; i < STRIDE; ++i) {\
-      for (int j = 0; j < STRIDE; ++j) {\
-        ashare[IDX][ty+i][tx+j] = a_ptr[(ty+i) * k + tx + j];\
-        bshare[IDX][ty+i][tx+j] = b_ptr[(ty+i) * n + tx + j];\
-      }\
-    }\
-    a_ptr += STEP, b_ptr += STEP * n;\
-  }while(0);
-  
-  #define SUBKERNEL(IDX)\
-    for (int i = 0; i < STRIDE; ++i) {\
-      for (int j = 0; j < STRIDE; ++j) {\
-        for (int kk = 0; kk < STEP; ++kk) {\
-          sum[i][j] += ashare[IDX][ty+i][kk] * bshare[IDX][kk][tx+j];\
-        }\
-      }\
-    }
+#define LOAD(IDX)                                                              \
+  do {                                                                         \
+    for (int i = 0; i < STRIDE; ++i) {                                         \
+      for (int j = 0; j < STRIDE; ++j) {                                       \
+        ashare[IDX][ty + i][tx + j] = a_ptr[(ty + i) * k + tx + j];            \
+        bshare[IDX][ty + i][tx + j] = b_ptr[(ty + i) * n + tx + j];            \
+      }                                                                        \
+    }                                                                          \
+    a_ptr += STEP, b_ptr += STEP * n;                                          \
+  } while (0);
+
+#define SUBKERNEL(IDX)                                                         \
+  for (int i = 0; i < STRIDE; ++i) {                                           \
+    for (int j = 0; j < STRIDE; ++j) {                                         \
+      for (int kk = 0; kk < STEP; ++kk) {                                      \
+        sum[i][j] += ashare[IDX][ty + i][kk] * bshare[IDX][kk][tx + j];        \
+      }                                                                        \
+    }                                                                          \
+  }
 
   LOAD(0)
   for (; a_ptr < end_a;) {
@@ -59,7 +59,7 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
     SUBKERNEL(1)
   }
 
-  #pragma unroll
+#pragma unroll
   for (int i = 0; i < STRIDE; ++i) {
     for (int j = 0; j < STRIDE; ++j) {
       c[(by + ty + i) * n + bx + tx + j] = sum[i][j];
@@ -72,7 +72,7 @@ void MY_MMult(cublasHandle_t handle, int m, int n, int k, float *d_A, int lda,
   constexpr int BLOCK = 8;
   constexpr int STRIDE = 4; // every thread calc STRIDExSTRIDE result
   dim3 block(BLOCK, BLOCK);
-  dim3 grid((m + BLOCK - 1) / BLOCK / STRIDE, (n + BLOCK - 1) / BLOCK /  STRIDE);
+  dim3 grid((m + BLOCK - 1) / BLOCK / STRIDE, (n + BLOCK - 1) / BLOCK / STRIDE);
 
   sgemm<BLOCK, STRIDE><<<grid, block>>>(m, n, k, d_A, lda, d_B, ldb, d_C, ldc);
 }

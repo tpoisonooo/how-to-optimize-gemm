@@ -29,8 +29,10 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
 
     for (int i = 0; i < STRIDE; ++i) {
       for (int j = 0; j < STRIDE; ++j) {
-        ashare[ty*STRIDE+i][tx*STRIDE+j] = a_ptr[(ty*STRIDE+i) * k + tx*STRIDE + j];
-        bshare[ty*STRIDE+i][tx*STRIDE+j] = b_ptr[(ty*STRIDE+i) * n + tx*STRIDE + j];
+        ashare[ty * STRIDE + i][tx * STRIDE + j] =
+            a_ptr[(ty * STRIDE + i) * k + tx * STRIDE + j];
+        bshare[ty * STRIDE + i][tx * STRIDE + j] =
+            b_ptr[(ty * STRIDE + i) * n + tx * STRIDE + j];
       }
     }
     __syncthreads();
@@ -39,7 +41,8 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
     for (int i = 0; i < STRIDE; ++i) {
       for (int j = 0; j < STRIDE; ++j) {
         for (int kk = 0; kk < STEP; ++kk) {
-          sum[i][j] += ashare[ty*STRIDE+i][kk] * bshare[kk][tx*STRIDE+j];
+          sum[i][j] +=
+              ashare[ty * STRIDE + i][kk] * bshare[kk][tx * STRIDE + j];
         }
       }
     }
@@ -47,11 +50,12 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
     __syncthreads();
   }
 
-    for (int i = 0; i < STRIDE; ++i) {
-      for (int j = 0; j < STRIDE; ++j) {
-        c[(STEP * by + ty*STRIDE + i) * n + STEP * bx + tx*STRIDE + j] = sum[i][j];
-      }
+  for (int i = 0; i < STRIDE; ++i) {
+    for (int j = 0; j < STRIDE; ++j) {
+      c[(STEP * by + ty * STRIDE + i) * n + STEP * bx + tx * STRIDE + j] =
+          sum[i][j];
     }
+  }
 }
 
 void MY_MMult(cublasHandle_t handle, int m, int n, int k, float *d_A, int lda,
@@ -60,7 +64,7 @@ void MY_MMult(cublasHandle_t handle, int m, int n, int k, float *d_A, int lda,
   constexpr int BLOCK = 16;
   constexpr int STRIDE = 2; // every thread calc STRIDExSTRIDE result
   dim3 block(BLOCK, BLOCK);
-  dim3 grid((m + BLOCK - 1) / BLOCK / STRIDE, (n + BLOCK - 1) / BLOCK /  STRIDE);
+  dim3 grid((m + BLOCK - 1) / BLOCK / STRIDE, (n + BLOCK - 1) / BLOCK / STRIDE);
 
   sgemm<BLOCK, STRIDE><<<grid, block>>>(m, n, k, d_A, lda, d_B, ldb, d_C, ldc);
 }

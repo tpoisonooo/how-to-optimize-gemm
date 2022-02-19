@@ -60,10 +60,9 @@ __device__ __forceinline__ void sts32(const float &reg, const uint32_t &addr) {
 
 // 256 threads  perblock, 2 blocks per multiprocessor
 /**
- * version 10 相对于 version 9 的特点是
- * 1. 用了 uint32_t 代替 64bit 的 smem 地址，然后用 lds128 来加载数据，3080
- * 上实跑没卵用。
- * 2. gmem 到 smem 时，用 reg 做搬运, 3080/Tesla T4  实跑都没有卵用。
+ * version 11 相对于 version 10 的特点是
+ * 1. 引入 gmem --- smem ping-pong
+ * 2. 引入 smem --- reg ping-pong
  */
 __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
                                                           const float *a,
