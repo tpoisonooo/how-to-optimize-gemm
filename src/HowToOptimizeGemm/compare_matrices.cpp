@@ -20,7 +20,7 @@ float compare_matrices(int m, int n, float *a, int lda, float *b, int ldb) {
       max_diff = (diff > max_diff ? diff : max_diff);
       if (0 == printed)
         if (max_diff > 0.5f || max_diff < -0.5f) {
-          printf("\n error: i %d  j %d diff %f", i, j, max_diff);
+          printf("\n error: i %d  j %d diff %f  got %f  expect %f ", i, j, max_diff, A(i, j), B(i, j));
           printed = 1;
         }
     }
