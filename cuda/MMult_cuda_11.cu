@@ -58,11 +58,16 @@ __device__ __forceinline__ void sts32(const float &reg, const uint32_t &addr) {
   asm volatile("st.shared.f32 [%0], %1;\n" : : "r"(addr), "f"(reg));
 }
 
-// 256 threads  perblock, 2 blocks per multiprocessor
+// MY_MMult = [
+// 1024 10991.45 7.247925e-05
+// 2048 15062.08 1.525879e-04
+// 3072 15937.80 2.288818e-04
+// 4096 15879.45 4.425049e-04
+// ];
 /**
  * version 11 相对于 version 10 的特点是
- * 1. 引入 gmem --- smem ping-pong
- * 2. 引入 smem --- reg ping-pong
+ * 1. 引入 gmem --- smem ping-pong， 没效果
+ * 2. 引入 smem --- reg ping-pong， TODO
  */
 __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
                                                           const float *a,
@@ -90,8 +95,8 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
   uint32_t aptr_base = smem_u32addr(ashare + (threadIdx.x / 16) * 4);
   uint32_t bptr_base = smem_u32addr(bshare + (threadIdx.x % 16) * 4);
 
-  for (int loop = 0; loop < k; loop += 8) {
-// part1: gmem to smem
+  {
+// load first
 // load gmem to smem for ashare
 #pragma unroll
     for (int i = 0; i < 4; ++i) {
@@ -110,13 +115,52 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
     for (int i = 0; i < 4; ++i) {
       sts32(b_ldg_reg[i], b_sts_addr + i * 32 * sizeof(float));
     }
-
     __syncthreads();
+    // add offset and flip flag
     from_a += 8;
     from_b += 8 * n;
 
-// part2: calculation
-// 计算 2x2 个 4x4
+    aptr_base ^= 0x2000;
+    bptr_base ^= 0x1000;
+    a_sts_addr ^= 0x2000;
+    b_sts_addr ^= 0x1000;
+  }
+
+  for (int loop = 0; loop < k; loop += 8) {
+    __syncthreads();
+    if (loop < k - 8) {
+      // if have more, load next
+#pragma unroll
+      for (int i = 0; i < 4; ++i) {
+        ldg32_nc_0(a_ldg_reg[i],
+                   (const char *)(a + from_a) + i * k * sizeof(float));
+      }
+      sts128(a_ldg_reg[0], a_ldg_reg[1], a_ldg_reg[2], a_ldg_reg[3],
+             a_sts_addr);
+// load gmem to smem for bshare
+#pragma unroll
+      for (int i = 0; i < 4; ++i) {
+        ldg32_nc_0(b_ldg_reg[i],
+                   (const char *)(b + from_b) + i * 32 * sizeof(float));
+      }
+#pragma unroll
+      for (int i = 0; i < 4; ++i) {
+        sts32(b_ldg_reg[i], b_sts_addr + i * 32 * sizeof(float));
+      }
+
+      from_a += 8;
+      from_b += 8 * n;
+
+      aptr_base ^= 0x2000;
+      bptr_base ^= 0x1000;
+      a_sts_addr ^= 0x2000;
+      b_sts_addr ^= 0x1000;
+    } else {
+      aptr_base ^= 0x2000;
+      bptr_base ^= 0x1000;
+    }
+
+    // calc
 #pragma unroll
     for (int subk = 0; subk < 8; ++subk) {
       lds128(panelA[0], panelA[1], panelA[2], panelA[3],
@@ -137,8 +181,8 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
         }
       }
     }
-    __syncthreads();
   }
+  __syncthreads();
 
   // part3: save to C
   int write_offset = (blockIdx.y * 128 + (threadIdx.x / 16) * 4) * n +
