@@ -209,7 +209,7 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
                                      ((threadIdx.x / 16) * 4 * SMEM_LDC) +
                                      (threadIdx.x % 16) * 4);
 
-      // 8x32
+  // 8x32
   float *C_lds_ptr =
       (float *)(smem) + (threadIdx.x / 32 * 8) * SMEM_LDC + (threadIdx.x % 32);
 
@@ -228,14 +228,14 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
       }
       __syncthreads();
 
-      float *cptr = c + blockIdx.x * 128 + 64 * j + (blockIdx.y * 128 + i * 64) * n +
+      float *cptr = c + blockIdx.x * 128 + 64 * j +
+                    (blockIdx.y * 128 + i * 64) * n +
                     (threadIdx.x / 32) * 8 * n + threadIdx.x % 32;
 
       for (int z = 0; z < 8; ++z) {
         stg32(C_lds_ptr[z * SMEM_LDC], cptr + z * n);
         stg32(C_lds_ptr[z * SMEM_LDC + 32], cptr + z * n + 32);
       }
-
     }
   }
 
