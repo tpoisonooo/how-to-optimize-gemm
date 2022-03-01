@@ -13,6 +13,7 @@
 
 #define SMEM_LDA (132)
 #define SMEM_LDB (128)
+#define SMEM_LDC (64)
 
 // remove original guard
 __device__ __forceinline__ void ldg32_nc_0(float &reg, const void *ptr) {
@@ -84,8 +85,9 @@ __device__ __forceinline__ void sts32(const float &reg, const uint32_t &addr) {
  * 1. 引入 gmem --- smem ping-pong， 没效果
  * 2. SMEM_LDA 改 132， 有效果.... **目前无法理解**
  * 3. 写回 C 矩阵时，引入 st128 方式，直接写入 global 地址，有效果。目前卡在
- * writeback 方式上？
- * 4. 更进一步地，先借助  uint32_t 写入 smem，sync 一下，再写入  gmem
+ * writeback 方式上
+ * 4. 更进一步地，先借助  uint32_t 写入 smem，sync 一下，再写入  gmem.  无效果.
+ * 5. ldgsts
  */
 __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
                                                           const float *a,
@@ -94,6 +96,7 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
 
   __shared__ __align__(
       16 * 1024) char smem[24 * 1024]; // 16KB shared memory for buffer
+
   float *ashare = reinterpret_cast<float *>(smem);
   float *bshare =
       reinterpret_cast<float *>(smem + 16 * 1024); // 8k shared mem for B
@@ -200,36 +203,40 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
       }
     }
   }
-  __syncthreads();
 
-#if 0
-  uint32_t c_sts_addr =
-      smem_u32addr(reinterpret_cast<float *>(smem) +
-                   ((threadIdx.x / 16) * 4) * 128 + (threadIdx.x % 16) * 4);
+#if 1
+  uint32_t c_sts_addr = smem_u32addr(reinterpret_cast<float *>(smem) +
+                                     ((threadIdx.x / 16) * 4 * SMEM_LDC) +
+                                     (threadIdx.x % 16) * 4);
+
+      // 8x32
+  float *C_lds_ptr =
+      (float *)(smem) + (threadIdx.x / 32 * 8) * SMEM_LDC + (threadIdx.x % 32);
 
 #pragma unroll
-  for (int i = 0; i < 4; ++i) {
-    sts128(sum[i][0], sum[i][1], sum[i][2], sum[i][3], c_sts_addr + (i * n) * sizeof(float));
-    sts128(sum[i][4], sum[i][5], sum[i][6], sum[i][7], c_sts_addr + (i * n + 64) * sizeof(float));
-    sts128(sum[i + 4][0], sum[i + 4][1], sum[i + 4][2], sum[i + 4][3],
-           c_sts_addr + (i + 64) * n * sizeof(float));
-    sts128(sum[i + 4][4], sum[i + 4][5], sum[i + 4][6], sum[i + 4][7],
-           c_sts_addr + ((i + 64) * n + 64) * sizeof(float));
-  }
+  for (int i = 0; i < 2; ++i) {
+#pragma unroll
+    for (int j = 0; j < 2; ++j) {
 
-  __syncthreads();
-  // part3: save to gmem C
-  const float *C_lds_ptr =
-      (float *)(smem) + (threadIdx.x / 32) * 128 + (threadIdx.x % 32);
+      __syncthreads();
 
-  float *cptr = c + blockIdx.x * 128 + blockIdx.y * 128 * n +
-                (threadIdx.x / 32) * n + threadIdx.x % 32;
+#pragma unroll
+      for (int p = 0; p < 4; ++p) {
+        sts128(sum[i * 4 + p][j * 4], sum[i * 4 + p][j * 4 + 1],
+               sum[i * 4 + p][j * 4 + 2], sum[i * 4 + p][j * 4 + 3],
+               c_sts_addr + p * SMEM_LDC * sizeof(float));
+      }
+      __syncthreads();
 
-  for (int i = 0; i < 16; ++i) {
-    cptr[i * 8 * n] = C_lds_ptr[i * 8 * 128];
-    cptr[i * 8 * n + 32] = C_lds_ptr[i * 8 * 128 + 32];
-    cptr[i * 8 * n + 64] = C_lds_ptr[i * 8 * 128 + 64];
-    cptr[i * 8 * n + 96] = C_lds_ptr[i * 8 * 128 + 96];
+      float *cptr = c + blockIdx.x * 128 + 64 * j + (blockIdx.y * 128 + i * 64) * n +
+                    (threadIdx.x / 32) * 8 * n + threadIdx.x % 32;
+
+      for (int z = 0; z < 8; ++z) {
+        stg32(C_lds_ptr[z * SMEM_LDC], cptr + z * n);
+        stg32(C_lds_ptr[z * SMEM_LDC + 32], cptr + z * n + 32);
+      }
+
+    }
   }
 
 #else
