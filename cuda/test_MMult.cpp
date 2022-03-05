@@ -42,7 +42,7 @@ int main() {
 
   cublasHandle_t handle;
   checkCudaErrors(cublasCreate(&handle));
-  checkCudaErrors(cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH));
+  // checkCudaErrors(cublasSetMathMode(handle, CUBLAS_TENSOR_OP_MATH));
 
   /* Time the "optimized" implementation */
   cudaEvent_t start, stop;
