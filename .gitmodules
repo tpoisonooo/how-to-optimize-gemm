@@ -1,3 +1,9 @@
 [submodule "x86"]
 	path = x86
 	url = https://github.com/flame/how-to-optimize-gemm
+	shallow = true
+[submodule "vulkan/kompute"]
+	path = vulkan/kompute
+	url = https://github.com/KomputeProject/kompute
+[submodule "kompute"]
+	shallow = true
