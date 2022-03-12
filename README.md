@@ -34,7 +34,7 @@ ARM 系列优化中文教程在
 3. [ARMv7 4x4kernel 懒人优化小实践](https://zhuanlan.zhihu.com/p/333799799)
 
 
-## int8 GEMM
+## 二、int8 GEMM
 自 [知乎 GEMM 入门](https://zhuanlan.zhihu.com/p/65436463) 发布后，有不少同学问如何写一个 int8 gemm。俺写好了~~~
 
 [chgemm](https://github.com/tpoisonooo/chgemm) 是个可用的 int8 gemm 库。相对于本教程中的代码，区别在于:
@@ -44,7 +44,7 @@ ARM 系列优化中文教程在
 
 chgemm 已合入[ncnn](https://github.com/tencent/ncnn) INT8 卷积实现。
 
-## 二、cuda
+## 三、cuda
 
 1. 需自行安装 cuda 驱动和 OpenBLAS 做 baseline
 2. 首次运行需要 `makefile` 里改成同一个代码版本，例如
@@ -66,6 +66,8 @@ $ ./test_MMult.x
 $ python3 plot.py output_MMult_cuBLAS_1.m output_MMult_cuda_12.m
 ```
 
-3. 注释文档
+3. 文档
 
 [cuda 入门的正确姿势：how-to-optimize-gemm](https://zhuanlan.zhihu.com/p/478846788)
+
+
