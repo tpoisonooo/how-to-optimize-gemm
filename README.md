@@ -62,4 +62,4 @@ $ ./test_MMult.x
 
 2. 如果想用`plot.py`绘制折线图，用 `make run` 生成运行结果
 
-目前 WIP，优化至包含 ptx 代码版本后，发布知乎教程。
+知乎解释 [cuda 入门的正确姿势：how-to-optimize-gemm](https://zhuanlan.zhihu.com/p/478846788)
