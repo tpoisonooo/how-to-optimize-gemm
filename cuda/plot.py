@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -27,12 +28,14 @@ def readFile(filename):
     return title, sizes, times
 
 if __name__ == '__main__':
-    plt.xlabel('size')
+    plt.xlabel('shape')
     plt.ylabel('gflops')
-    t1, x1, y1 = readFile('output_old.m')
-    plt.plot(x1, y1, label=t1)
-    t2, x2, y2 = readFile('output_new.m')
-    plt.plot(x2, y2, label=t2)
+    l = len(sys.argv)
+    for i,item in enumerate(sys.argv):
+        if i == 0:
+            continue
+        t,x,y = readFile(item)
+        plt.plot(x,y,label=t)
     plt.legend()
     plt.show()
-    
+
