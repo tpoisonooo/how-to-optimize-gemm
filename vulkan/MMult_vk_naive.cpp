@@ -1,26 +1,22 @@
+#define SPDLOG_ACTIVE_LEVEL 5
 #include "kompute/Kompute.hpp"
 #include "Shader.hpp"
-#include "types.h"
 
-float kompute(const std::string& shader_template, unsigned int m, unsigned int k, unsigned int n) {
+float kompute(const std::string& shader_template, uint32_t m, uint32_t k, uint32_t n, float* a, float *b, float *c) {
+    // build real .comp shader
+    
     constexpr int local_size = 32;
     char shader[2048] = {0};
     sprintf(shader, shader_template.c_str(), local_size, local_size);
-    fprintf(stdout, "%s\n", shader);
+    // fprintf(stdout, "%s\n", shader);
 
     kp::Manager mgr;
 
-    auto dtype = kp::Tensor::TensorDataTypes::eFloat;
-
-    // define Input & Output
-    AlignVector matrixA(m * k, 1.f);
-    AlignVector matrixB(k * n, 1.f);
-    AlignVector matrixC(m * n);
-
     // Create and initialise Kompute Tensors through manager
-    auto tensorInA = mgr.tensor(matrixA.data(), matrixA.size(), sizeof(float), dtype);
-    auto tensorInB = mgr.tensor(matrixB.data(), matrixB.size(), sizeof(float), dtype);
-    auto tensorInC = mgr.tensor(matrixC.data(), matrixC.size(), sizeof(float), dtype);
+    auto dtype = kp::Tensor::TensorDataTypes::eFloat;
+    auto tensorInA = mgr.tensor(a, m*k, sizeof(float), dtype);
+    auto tensorInB = mgr.tensor(b, k*n, sizeof(float), dtype);
+    auto tensorInC = mgr.tensor(c, m*n, sizeof(float), dtype);
 
     std::vector<std::shared_ptr<kp::Tensor>> params = {tensorInA, tensorInB, tensorInC};
 
@@ -38,20 +34,15 @@ float kompute(const std::string& shader_template, unsigned int m, unsigned int k
         ->record<kp::OpTensorSyncLocal>(params)
         ->eval();
 
-    float* result = tensorInC->data<float>();
-    constexpr int LEN = 4;
-    for (int i = 0; i < LEN; ++i) {
-        fprintf(stdout, "tensorInC raw %d: %f\n", i, result[i]);
+    auto ptr = tensorInC->data<float>();
+    for (int i = 0; i < 4; ++i) {
+        fprintf(stdout, "%d = %f \n", i, ptr[i]);
     }
+    memcpy(c, tensorInC->data<float>(), m * n * sizeof(float));
+    return 100;
 }
 
-    // diff = compare_matrices(m, n, cold, ldc, cref, ldc);
-    // if (diff > 0.5f || diff < -0.5f) {
-    //   printf("diff too big !\n");
-    //   exit(-1);
-    // }
-
-int main() {
+float MY_MMult(int m, int n, int k, float * a, float * b, float * c) {
     std::string shader_template = (R"(
         #version 450
 
@@ -77,7 +68,5 @@ int main() {
         }
     )");
 
-    // Run the function declared above with our raw string shader
-    constexpr int SIZE = 256;
-    auto gflops = kompute(shader_template, SIZE, SIZE, SIZE);
+    return kompute(shader_template, static_cast<uint32_t>(m), static_cast<uint32_t>(n), static_cast<uint32_t>(k), a, b, c);
 }

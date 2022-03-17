@@ -1,23 +1,24 @@
-#include <stdio.h>
+#include <iostream>
 // #include <malloc.h>
 #include "parameters.h"
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
+#define SPDLOG_ACTIVE_LEVEL 6
 
-void REF_MMult(int, int, int, float *, int, float *, int, float *, int);
+void REF_MMult(int, int, int, float *, float *, float *);
 float MY_MMult(int, int, int, float *, float *, float *);
-void copy_matrix(int, int, float *, int, float *, int);
-void random_matrix(int, int, float *, int);
-float compare_matrices(int, int, float *, int, float *, int);
+void copy_matrix(int, int, float *, float *);
+void random_matrix(int, int, float *);
+float compare_matrices(int, int, float *, float *);
 
 double dclock();
 
 int main() {
-  int p, m, n, k, lda, ldb, ldc, rep;
+  int p, m, n, k;
 
-  double dtime, dtime_best, gflops, diff;
+  double diff;
 
-  float *a, *b, *c, *cref, *cold;
+  float *a, *b, *cref, *cold;
 
   printf("MY_MMult = [\n");
 
@@ -26,51 +27,53 @@ int main() {
     n = (N == -1 ? p : N);
     k = (K == -1 ? p : K);
 
-    gflops = 2.0 * m * n * k * 1.0e-09;
-
-    lda = (LDA == -1 ? m : LDA);
-    ldb = (LDB == -1 ? k : LDB);
-    ldc = (LDC == -1 ? m : LDC);
-
     /* Allocate space for the matrices */
     /* Note: I create an extra column in A to make sure that
        prefetching beyond the matrix does not cause a segfault */
-    const size_t mem_size_A = lda * (k + 1) * sizeof(float);
-    const size_t mem_size_B = ldb * n * sizeof(float);
-    const size_t mem_size_C = ldc * n * sizeof(float);
-    a = (float *)malloc(mem_size_A);
-    b = (float *)malloc(mem_size_B);
-    c = (float *)malloc(mem_size_C);
-    cold = (float *)malloc(mem_size_C);
-    cref = (float *)malloc(mem_size_C);
+    const size_t mem_size_A = m * k * sizeof(float);
+    const size_t mem_size_B = k * n * sizeof(float);
+    const size_t mem_size_C = m * n * sizeof(float);
+    constexpr size_t alignment = 64;
+    a = (float*) std::aligned_alloc(alignment, mem_size_A * sizeof(float));
+    b = (float*) std::aligned_alloc(alignment, mem_size_B * sizeof(float));
+    cold = (float*) std::aligned_alloc(alignment, mem_size_C * sizeof(float));
+    cref = (float*) std::aligned_alloc(alignment, mem_size_C * sizeof(float));
 
     /* Generate random matrices A, B, Cold */
-    random_matrix(m, k, a, lda);
-    random_matrix(k, n, b, ldb);
-    random_matrix(m, n, cold, ldc);
-    memset(cold, 0, mem_size_C);
-    memset(cref, 0, mem_size_C);
+    random_matrix(m, k, a);
+    random_matrix(k, n, b);
+    std::memset(cold, 0, mem_size_C);
+    std::memset(cref, 0, mem_size_C);
 
     /* Run the reference implementation so the answers can be compared */
-    // printf( "init\n");
+    REF_MMult(m, n, k, a, b, cref);
 
-    REF_MMult(m, n, k, a, lda, b, ldb, cref, ldc);
-    // printf( "benchmark\n");
-    float avg_gflops = 0.0;
-    for (rep = 0; rep < NREPEATS; rep++) {
+    float msecTotal = 0.0f;
+    for (int rep = 0; rep < NREPEATS; rep++) {
       /* Time your implementation */
-      avg_gflops = MY_MMult(m, n, k, a, b, c);
+      msecTotal += MY_MMult(m, n, k, a, b, cold);
     }
 
-    printf("%d %.2f %le \n", p, gflops, diff);
+    diff = compare_matrices(m, n, cold, cref);
+    if (diff > 0.5f || diff < -0.5f) {
+      fprintf(stdout, "diff too big !\n");
+      exit(-1);
+    }
 
-    free(a);
-    free(b);
-    free(c);
-    free(cold);
-    free(cref);
+    // Compute and print the performance
+    float msecPerMatrixMul = msecTotal / NREPEATS;
+    double flopsPerMatrixMul = 2.0 * m * k * n;
+    double gflops =
+        (flopsPerMatrixMul * 1.0e-9f) / (msecPerMatrixMul / 1000.0f);
+
+    fprintf(stdout, "%d %.2f %le \n", p, gflops, diff);
+
+    std::free(a);
+    std::free(b);
+    std::free(cold);
+    std::free(cref);
   }
 
-  printf("];\n");
+  fprintf(stdout, "];\n");
   return 0;
 }

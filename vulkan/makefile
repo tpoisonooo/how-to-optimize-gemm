@@ -1,15 +1,13 @@
-OLD  := MMult_vulkan_1
-NEW := MMult_vulkan_1
 
-#
-# sample makefile
-#
+OLD  := MMult_vk_naive
+NEW := MMult_vk_naive
+KOMPUTE_BUILD := /home/khj/kompute/build
 
 CC         := g++ 
 LINKER     := $(CC)
-#CFLAGS     := -O0 -g -Wall
-CFLAGS     := -std=c++17 -O2 -g
-LDFLAGS    := -lm -lopenblas
+CFLAGS     := -std=c++17 -O0 -g -Wall
+# CFLAGS     := -std=c++17 -O2 -g
+LDFLAGS    := -lm -lopenblas $(KOMPUTE_BUILD)/src/libkompute.a $(KOMPUTE_BUILD)/src/kompute_fmt/libfmt.a $(KOMPUTE_BUILD)/src/kompute_spdlog/libspdlog.a `pkg-config --libs vulkan` -lpthread
 
 UTIL       := copy_matrix.o \
               compare_matrices.o \
