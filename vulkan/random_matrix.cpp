@@ -1,8 +1,7 @@
 #include <stdlib.h>
 
-
 void random_matrix(int m, int n, float *a) {
-#define A(i, j) a[(j)*n + (i)]
+#define A(i, j) a[(i)*n + (j)]
 
   double drand48();
   int i, j;
@@ -14,7 +13,7 @@ void random_matrix(int m, int n, float *a) {
 #else
       A(i, j) = (j - i) % 3;
 #endif
-      // A(i, j) = 1.0;
+      A(i, j) = j - i;
     }
   }
 #undef A

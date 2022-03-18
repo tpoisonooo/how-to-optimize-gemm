@@ -3,32 +3,17 @@
 #include "kompute/Kompute.hpp"
 #include <cassert>
 #include <chrono>
+#include <iostream>
 
-// MY_MMult = [
-// 64 418.41 0.000000e+00
-// 96 1323.02 0.000000e+00
-// 128 2610.83 0.000000e+00
-// 160 4317.37 0.000000e+00
-// 192 6019.51 0.000000e+00
-// 224 7246.10 0.000000e+00
-// 256 8717.81 0.000000e+00
-// 288 7951.89 0.000000e+00
-// 320 7863.74 0.000000e+00
-// 352 9812.85 0.000000e+00
-// 384 10701.02 0.000000e+00
-// 416 11126.77 0.000000e+00
-// 448 11589.69 0.000000e+00
-// 480 11919.68 0.000000e+00
-// 512 12273.19 0.000000e+00
-// ];
 float kompute(const std::string &shader_template, uint32_t m, uint32_t k,
               uint32_t n, float *a, float *b, float *c) {
   // build real .comp shader
 
-  constexpr int local_size = 32;
-  constexpr int block = 32;
+  constexpr int local_size = 16;
+  constexpr int block = 16;
   char shader[2048] = {0};
-  sprintf(shader, shader_template.c_str(), local_size, local_size, block);
+  sprintf(shader, shader_template.c_str(), local_size, local_size, local_size,
+          local_size, local_size, local_size, block);
   // fprintf(stdout, "%s\n", shader);
 
   kp::Manager mgr;
@@ -48,19 +33,6 @@ float kompute(const std::string &shader_template, uint32_t m, uint32_t k,
   auto algorithm =
       mgr.algorithm(params, compileSource(shader), workgroup, {k * 1.f});
 
-#if 0
-    // use weired vk timestamps
-    auto seq = mgr.sequence(0, 3);
-    seq->record<kp::OpTensorSyncDevice>(params)
-        ->record<kp::OpAlgoDispatch>(algorithm)
-        ->record<kp::OpTensorSyncLocal>(params)
-        ->eval();
-
-    auto timestamps = seq->getTimestamps();
-    assert(timestamps.size() == 4);
-    auto computecost = timestamps[2] - timestamps[1];
-#else
-
   auto seq = mgr.sequence();
   seq->record<kp::OpTensorSyncDevice>(params)->eval();
 
@@ -77,7 +49,6 @@ float kompute(const std::string &shader_template, uint32_t m, uint32_t k,
 
   memcpy(c, tensorInC->data<float>(), m * n * sizeof(float));
   return count / 1e6f;
-#endif
 }
 
 float MY_MMult(int m, int n, int k, float *a, float *b, float *c) {
@@ -92,18 +63,34 @@ float MY_MMult(int m, int n, int k, float *a, float *b, float *c) {
 
         layout (constant_id = 0) const float tensor_size_f = 0;
 
-        void main()
-        {
-            uint block = %d;
+        shared float sub_tensor_1[%d][%d];
+        shared float sub_tensor_2[%d][%d];
 
-            uint globalRow = gl_WorkGroupID.x * block + gl_LocalInvocationID.x;
-            uint globalCol = gl_WorkGroupID.y * block +gl_LocalInvocationID.y;
+        void main() {
+            uint block = %d;
             uint tensor_size = uint(tensor_size_f);
-            
+            uint loop = tensor_size / block;
+
+            uint threadIdx = gl_LocalInvocationID.x;
+            uint threadIdy = gl_LocalInvocationID.y;
+
+            uint globalCol = gl_WorkGroupID.y * block +threadIdy;
+            uint globalRow = gl_WorkGroupID.x * block + threadIdx;
+
             float acc = 0.0;
-            for(uint k = 0u; k < tensor_size; k++) {
-                acc += in_tensor_1[(globalCol * tensor_size) + k] * in_tensor_2[(k * tensor_size) + globalRow];
+            for (uint i = 0u; i < loop; ++i) {
+                sub_tensor_1[threadIdy][threadIdx] = in_tensor_1[tensor_size * globalCol + i * block + threadIdx];
+                sub_tensor_2[threadIdy][threadIdx] = in_tensor_2[tensor_size * (i * block + threadIdy) + globalRow];
+
+                memoryBarrierShared();
+                barrier();
+
+                for (uint k = 0u; k < block; ++k) {
+                    acc += sub_tensor_1[threadIdx][k] * sub_tensor_2[k][threadIdy];
+                }
+                barrier();
             }
+
             out_tensor[(globalCol * tensor_size) + globalRow] = acc;
         }
     )");

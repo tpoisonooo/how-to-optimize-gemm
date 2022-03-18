@@ -1,8 +1,9 @@
-#include <iostream>
-// #include <malloc.h>
 #include "parameters.h"
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
+#include <tuple>
+#include <vector>
 #define SPDLOG_ACTIVE_LEVEL 6
 
 void REF_MMult(int, int, int, float *, float *, float *);
@@ -20,7 +21,7 @@ int main() {
 
   float *a, *b, *cref, *cold;
 
-  printf("MY_MMult = [\n");
+  std::vector<std::tuple<int, double, double>> results;
 
   for (p = PFIRST; p <= PLAST; p += PINC) {
     m = (M == -1 ? p : M);
@@ -30,14 +31,14 @@ int main() {
     /* Allocate space for the matrices */
     /* Note: I create an extra column in A to make sure that
        prefetching beyond the matrix does not cause a segfault */
-    const size_t mem_size_A = m * k * sizeof(float);
+    const size_t mem_size_A = m * (k + 1) * sizeof(float);
     const size_t mem_size_B = k * n * sizeof(float);
     const size_t mem_size_C = m * n * sizeof(float);
     constexpr size_t alignment = 64;
-    a = (float*) std::aligned_alloc(alignment, mem_size_A * sizeof(float));
-    b = (float*) std::aligned_alloc(alignment, mem_size_B * sizeof(float));
-    cold = (float*) std::aligned_alloc(alignment, mem_size_C * sizeof(float));
-    cref = (float*) std::aligned_alloc(alignment, mem_size_C * sizeof(float));
+    a = (float *)std::aligned_alloc(alignment, mem_size_A * sizeof(float));
+    b = (float *)std::aligned_alloc(alignment, mem_size_B * sizeof(float));
+    cold = (float *)std::aligned_alloc(alignment, mem_size_C * sizeof(float));
+    cref = (float *)std::aligned_alloc(alignment, mem_size_C * sizeof(float));
 
     /* Generate random matrices A, B, Cold */
     random_matrix(m, k, a);
@@ -56,7 +57,7 @@ int main() {
 
     diff = compare_matrices(m, n, cold, cref);
     if (diff > 0.5f || diff < -0.5f) {
-      fprintf(stdout, "diff too big !\n");
+      fprintf(stdout, "%d diff too big: %le\n", p, diff);
       exit(-1);
     }
 
@@ -66,7 +67,7 @@ int main() {
     double gflops =
         (flopsPerMatrixMul * 1.0e-9f) / (msecPerMatrixMul / 1000.0f);
 
-    fprintf(stdout, "%d %.2f %le \n", p, gflops, diff);
+    results.emplace_back(p, gflops, diff);
 
     std::free(a);
     std::free(b);
@@ -74,6 +75,11 @@ int main() {
     std::free(cref);
   }
 
+  fprintf(stdout, "MY_MMult = [\n");
+  for (auto &item : results) {
+    fprintf(stdout, "%d %.2f %le \n", std::get<0>(item), std::get<1>(item),
+            std::get<2>(item));
+  }
   fprintf(stdout, "];\n");
   return 0;
 }
