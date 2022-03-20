@@ -4,7 +4,7 @@ The below parameters set this range of values that p takes on
 */   
 #define PFIRST 64
 #define PLAST  512
-#define PINC   32
+#define PINC   64
 
 /* 
 In the test driver, the m, n, and k dimensions are set to the below 

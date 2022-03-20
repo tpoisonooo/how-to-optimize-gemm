@@ -4,22 +4,22 @@
 #include <cassert>
 #include <chrono>
 
-// MY_MMult = [
-// 64 418.41 0.000000e+00
-// 96 1323.02 0.000000e+00
-// 128 2610.83 0.000000e+00
-// 160 4317.37 0.000000e+00
-// 192 6019.51 0.000000e+00
-// 224 7246.10 0.000000e+00
-// 256 8717.81 0.000000e+00
-// 288 7951.89 0.000000e+00
-// 320 7863.74 0.000000e+00
-// 352 9812.85 0.000000e+00
-// 384 10701.02 0.000000e+00
-// 416 11126.77 0.000000e+00
-// 448 11589.69 0.000000e+00
-// 480 11919.68 0.000000e+00
-// 512 12273.19 0.000000e+00
+// MY_MMult = [                                                                    
+// 64 0.41 0.000000e+00                                                            
+// 96 1.25 0.000000e+00                                                            
+// 128 2.46 0.000000e+00                                                           
+// 160 4.48 0.000000e+00                                                           
+// 192 6.28 0.000000e+00
+// 224 7.84 0.000000e+00
+// 256 8.51 0.000000e+00
+// 288 8.14 0.000000e+00
+// 320 9.30 0.000000e+00
+// 352 9.90 0.000000e+00
+// 384 10.71 0.000000e+00
+// 416 11.09 0.000000e+00
+// 448 11.38 0.000000e+00
+// 480 11.94 0.000000e+00
+// 512 12.27 0.000000e+00
 // ];
 float kompute(const std::string &shader_template, uint32_t m, uint32_t k,
               uint32_t n, float *a, float *b, float *c) {
@@ -59,6 +59,9 @@ float kompute(const std::string &shader_template, uint32_t m, uint32_t k,
     auto timestamps = seq->getTimestamps();
     assert(timestamps.size() == 4);
     auto computecost = timestamps[2] - timestamps[1];
+     memcpy(c, tensorInC->data<float>(), m * n * sizeof(float));
+     // return milliseconds ?
+    return computecost/1000.f;
 #else
 
   auto seq = mgr.sequence();
@@ -76,7 +79,7 @@ float kompute(const std::string &shader_template, uint32_t m, uint32_t k,
           .count();
 
   memcpy(c, tensorInC->data<float>(), m * n * sizeof(float));
-  return count / 1e6f;
+  return count / 1e3f;
 #endif
 }
 
