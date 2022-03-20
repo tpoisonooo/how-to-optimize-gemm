@@ -4,22 +4,15 @@
 #include <cassert>
 #include <chrono>
 
-// MY_MMult = [                                                                    
-// 64 0.41 0.000000e+00                                                            
-// 96 1.25 0.000000e+00                                                            
-// 128 2.46 0.000000e+00                                                           
-// 160 4.48 0.000000e+00                                                           
-// 192 6.28 0.000000e+00
-// 224 7.84 0.000000e+00
-// 256 8.51 0.000000e+00
-// 288 8.14 0.000000e+00
-// 320 9.30 0.000000e+00
-// 352 9.90 0.000000e+00
-// 384 10.71 0.000000e+00
-// 416 11.09 0.000000e+00
-// 448 11.38 0.000000e+00
-// 480 11.94 0.000000e+00
-// 512 12.27 0.000000e+00
+// MY_MMult = [
+// 64 18.28 0.000000e+00 
+// 128 21.67 0.000000e+00 
+// 192 22.56 0.000000e+00 
+// 256 22.04 0.000000e+00 
+// 320 22.18 0.000000e+00 
+// 384 22.15 0.000000e+00 
+// 448 22.17 0.000000e+00 
+// 512 22.31 0.000000e+00 
 // ];
 float kompute(const std::string &shader_template, uint32_t m, uint32_t k,
               uint32_t n, float *a, float *b, float *c) {
@@ -48,20 +41,18 @@ float kompute(const std::string &shader_template, uint32_t m, uint32_t k,
   auto algorithm =
       mgr.algorithm(params, compileSource(shader), workgroup, {k * 1.f});
 
-#if 0
-    // use weired vk timestamps
-    auto seq = mgr.sequence(0, 3);
-    seq->record<kp::OpTensorSyncDevice>(params)
-        ->record<kp::OpAlgoDispatch>(algorithm)
-        ->record<kp::OpTensorSyncLocal>(params)
-        ->eval();
+#if 1
+  mgr.sequence()->record<kp::OpTensorSyncDevice>(params)->eval();
+  // use weired vk timestamps
+  auto seq = mgr.sequence(0, 1);
+  seq->record<kp::OpAlgoDispatch>(algorithm)->eval();
 
-    auto timestamps = seq->getTimestamps();
-    assert(timestamps.size() == 4);
-    auto computecost = timestamps[2] - timestamps[1];
-     memcpy(c, tensorInC->data<float>(), m * n * sizeof(float));
-     // return milliseconds ?
-    return computecost/1000.f;
+  mgr.sequence()->record<kp::OpTensorSyncLocal>(params)->eval();
+
+  auto timestamps = seq->getTimestamps();
+  auto computecost = timestamps[1] - timestamps[0];
+  memcpy(c, tensorInC->data<float>(), m * n * sizeof(float));
+  return computecost / 1e6f;
 #else
 
   auto seq = mgr.sequence();
