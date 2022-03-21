@@ -1,5 +1,5 @@
 OLD  := MMult_vk_naive
-NEW := MMult_vk_naive
+NEW := MMult_vk_2
 KOMPUTE_BUILD := /home/khj/kompute/build
 
 CC         := g++

@@ -1,0 +1,40 @@
+#version 450
+#extension GL_EXT_control_flow_attributes : enable
+
+layout (local_size_x = 16, local_size_y = 16) in;
+
+layout (set = 0, binding = 0) readonly buffer buf_in_tensor_1 { float in_tensor_1[]; };
+layout (set = 0, binding = 1) readonly buffer buf_in_tensor_2 { float in_tensor_2[]; };
+layout (set = 0, binding = 2) writeonly buffer buf_out_tensor { float out_tensor[]; };
+
+layout (constant_id = 0) const float tensor_size_f = 0;
+
+shared float sub_tensor_1[16][16];
+shared float sub_tensor_2[16][16];
+
+void main() {
+    uint block = 16;
+    uint tensor_size = uint(tensor_size_f);
+    uint loop = tensor_size / block;
+
+    uvec3 threadID = gl_LocalInvocationID;
+
+    uint globalCol = gl_WorkGroupID.y * block +threadID.y;
+    uint globalRow = gl_WorkGroupID.x * block + threadID.x;
+
+    float acc = 0.0;
+    [[unroll]] for (uint i = 0u; i < loop; ++i) {
+        sub_tensor_1[threadID.y][threadID.x] = in_tensor_1[tensor_size * globalCol + i * block + threadID.x];
+        sub_tensor_2[threadID.y][threadID.x] = in_tensor_2[tensor_size * (i * block + threadID.y) + globalRow];
+
+        memoryBarrierShared();
+        barrier();
+
+        for (uint k = 0u; k < block; ++k) {
+            acc += sub_tensor_1[threadID.y][k] * sub_tensor_2[k][threadID.x];
+        }
+        barrier();
+    }
+
+    out_tensor[(globalCol * tensor_size) + globalRow] = acc;
+}

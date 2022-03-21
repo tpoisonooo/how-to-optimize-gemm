@@ -30,3 +30,21 @@ compileSource(
     buffer.insert(buffer.begin(), std::istreambuf_iterator<char>(fileStream), {});
     return {(uint32_t*)buffer.data(), (uint32_t*)(buffer.data() + buffer.size())};
 }
+
+/**
+ * @param source An individual raw glsl shader filename
+ * @return The compiled SPIR-V binary in unsigned int32 format
+ */
+static
+std::vector<uint32_t>
+compileFile(const std::string& filename)
+{
+    char cmd[256] = {0};
+    sprintf(cmd, "glslangValidator -V %s -o tmp_kp_shader.comp.spv", filename.c_str());
+    if (system(cmd))
+        throw std::runtime_error("Error running glslangValidator command");
+    std::ifstream fileStream("tmp_kp_shader.comp.spv", std::ios::binary);
+    std::vector<char> buffer;
+    buffer.insert(buffer.begin(), std::istreambuf_iterator<char>(fileStream), {});
+    return {(uint32_t*)buffer.data(), (uint32_t*)(buffer.data() + buffer.size())};
+}
