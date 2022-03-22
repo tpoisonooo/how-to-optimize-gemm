@@ -1,15 +1,13 @@
-/* Create macros so that the matrices are stored in row-major order */
-
-#define A(i,j) a[ (i)*lda + (j) ]
-#define B(i,j) b[ (i)*ldb + (j) ]
-#define C(i,j) c[ (i)*ldc + (j) ]
-
-/* Routine for computing C = A * B + C */
+/* Routine for computing C = A * B */
 
 void MY_MMult( int m, int n, int k, float *a, int lda, 
                                     float *b, int ldb,
                                     float *c, int ldc )
 {
+#define A(i,j) a[ (i)*k + (j) ]
+#define B(i,j) b[ (i)*n + (j) ]
+#define C(i,j) c[ (i)*n + (j) ]
+
   int i, j, p;
 
   for ( i=0; i<m; i++ ){        /* Loop over the rows of C */
@@ -21,6 +19,9 @@ void MY_MMult( int m, int n, int k, float *a, int lda,
       }
     }
   }
+#undef A
+#undef B
+#undef C
 }
 
 

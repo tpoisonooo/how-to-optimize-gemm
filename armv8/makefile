@@ -11,7 +11,7 @@ ARCH := native
 CC         := g++
 LINKER     := $(CC)
 #CFLAGS     := -O0 -g -Wall
-CFLAGS     := -std=c++11 -O3 -march=$(ARCH) -mfpu=neon -ftree-vectorize
+CFLAGS     := -std=c++17 -O2 -g -march=$(ARCH) -mfpu=neon -ftree-vectorize
 LDFLAGS    := -lm
 
 UTIL       := copy_matrix.o \
@@ -23,9 +23,7 @@ UTIL       := copy_matrix.o \
 
 TEST_OBJS  := test_MMult.o $(NEW).o 
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-%.o: %.c
+%.o: %.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 all: 
