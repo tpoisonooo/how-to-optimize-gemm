@@ -13,7 +13,7 @@ NEW   := MMult_4x4_8
 
 3. 默认情况下`ARCH := native`。直接编译运行即可
 ```
-$ cd arm && make run
+$ cd armv8 && make run
 ```
 
 4. gflops 结果在对应`.m` 文件，用`plot.py`可绘制相关折线图。
