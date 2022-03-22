@@ -15,9 +15,9 @@
 
 /* Create macros so that the matrices are stored in row-major order */
 
-#define A(i, j) a[(i)*lda + (j)]
-#define B(i, j) b[(i)*ldb + (j)]
-#define C(i, j) c[(i)*ldc + (j)]
+#define A(i, j) a[(i) * lda + (j)]
+#define B(i, j) b[(i) * ldb + (j)]
+#define C(i, j) c[(i) * ldc + (j)]
 
 #define min(i, j) ((i) < (j) ? (i) : (j))
 
@@ -64,12 +64,12 @@ float *fastMalloc(int size) {
   void *ptr = 0;
   int iRet = posix_memalign(&ptr, 64, size * sizeof(float));
   assert(0 == iRet);
-  return (float*)ptr;
+  return (float *)ptr;
 }
 
 /* Suppose that m%4==0 and n%4==0 and k%4==0, avoiding process boundary !! */
-void MY_MMult(int m, int n, int k, float *a, int lda,
-              float *b, int ldb, float *c, int ldc) {
+void MY_MMult(int m, int n, int k, float *a, int lda, float *b, int ldb,
+              float *c, int ldc) {
 #ifdef DEBUG_PRINT_DATA
   printf("\n-------\n");
   print_matrix(m, k, a, lda);
@@ -230,28 +230,22 @@ void kernel_4x4(int m, int n, int k, float *sa, float *sb, float *sc, int ldc) {
                    "   ld1 {v0.4s}, [%1], #16          \n"
                    "   fmla v16.4s, v0.4s, v8.s[0]     \n"
                    "   fmla v20.4s, v0.4s, v8.s[1]     \n"
-
                    "   ld1 {v9.4s}, [%0], #16          \n"
-
                    "   fmla v24.4s, v0.4s, v8.s[2]     \n"
                    "   ld1 {v1.4s}, [%1], #16          \n"
                    "   fmla v28.4s, v0.4s, v8.s[3]     \n"
-
                    "   ld1 {v8.4s}, [%0], #16          \n"
-
                    "   fmla v16.4s, v1.4s, v9.s[0]     \n"
                    "   ld1 {v0.4s}, [%1], #16          \n"
                    "   fmla v20.4s, v1.4s, v9.s[1]     \n"
                    "   fmla v24.4s, v1.4s, v9.s[2]     \n"
                    "   fmla v28.4s, v1.4s, v9.s[3]     \n"
-
                    "   fmla v16.4s, v0.4s, v8.s[0]     \n"
                    "   fmla v20.4s, v0.4s, v8.s[1]     \n"
                    "   ld1 {v9.4s}, [%0], #16          \n"
                    "   fmla v24.4s, v0.4s, v8.s[2]     \n"
                    "   ld1 {v1.4s}, [%1], #16          \n"
                    "   fmla v28.4s, v0.4s, v8.s[3]     \n"
-
                    "   fmla v16.4s, v1.4s, v9.s[0]     \n"
                    "   fmla v20.4s, v1.4s, v9.s[1]     \n"
                    "   fmla v24.4s, v1.4s, v9.s[2]     \n"
@@ -307,9 +301,7 @@ void kernel_4x4(int m, int n, int k, float *sa, float *sb, float *sc, int ldc) {
 
             // float *destptr3 = c + 3 * ldc;
             "vld1.f32   {d22-d23}, [%4]       \n"
-
             "0:                               \n"
-
             "pld        [%5, #0x180]            \n"
             "pld        [%6, #0x180]            \n"
             "vldr	d8, [%6]		\n"
@@ -344,7 +336,6 @@ void kernel_4x4(int m, int n, int k, float *sa, float *sb, float *sc, int ldc) {
             "vldr	d14, [%6, #48]		\n"
             "vmla.f32   q11, q2, d13[1]       \n"
             // L
-
             "vmla.f32   q8, q3, d14[0]        \n"
             "vldr	d15, [%6, #56]		\n"
             "vmla.f32   q9, q3, d14[1]        \n"
@@ -364,7 +355,6 @@ void kernel_4x4(int m, int n, int k, float *sa, float *sb, float *sc, int ldc) {
             "vst1.f32   {d20-d21}, [%3]      \n"
             // *destptr3 += sum3;
             "vst1.f32   {d22-d23}, [%4]      \n"
-
             : "=r"(tmpk),     // %0
               "=r"(destptr0), // %1
               "=r"(destptr1), // %2
@@ -374,7 +364,6 @@ void kernel_4x4(int m, int n, int k, float *sa, float *sb, float *sc, int ldc) {
               "=r"(r1)        //%6
             : "0"(tmpk), "1"(destptr0), "2"(destptr1), "3"(destptr2),
               "4"(destptr3), "5"(r0), "6"(r1)
-
             : "cc", "memory", "q0", "q1", "q2", "q3", "q4", "q5", "q6", "q7",
               "q8", "q9", "q10", "q11");
       }

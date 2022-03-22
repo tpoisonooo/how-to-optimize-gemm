@@ -3,8 +3,8 @@
 #include <stdio.h>
 
 float compare_matrices(int m, int n, float *a, float *b) {
-#define A(i, j) a[(i)*n + (j)]
-#define B(i, j) b[(i)*n + (j)]
+#define A(i, j) a[(i) * n + (j)]
+#define B(i, j) b[(i) * n + (j)]
   //    printf("\n---result----\n");
   //    print_matrix(m, n, a, lda);
   //    printf("\n-------\n");

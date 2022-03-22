@@ -13,27 +13,19 @@ float compare_matrices(int, int, float *, float *);
 
 double dclock();
 
-int main()
-{
-  int 
-    p, 
-    m, n, k,
-    rep;
+int main() {
+  int p, m, n, k, rep;
 
-  double 
-    dtime, dtime_best,        
-    gflops, 
-    diff;
+  double dtime, dtime_best, gflops, diff;
 
-  float 
-    *a, *b, *c, *cref, *cold;    
-  
-  printf( "MY_MMult = [\n" );
-    
-  for ( p=PFIRST; p<=PLAST; p+=PINC ){
-    m = ( M == -1 ? p : M );
-    n = ( N == -1 ? p : N );
-    k = ( K == -1 ? p : K );
+  float *a, *b, *cref, *cold;
+
+  printf("MY_MMult = [\n");
+
+  for (p = PFIRST; p <= PLAST; p += PINC) {
+    m = (M == -1 ? p : M);
+    n = (N == -1 ? p : N);
+    k = (K == -1 ? p : K);
 
     gflops = 2.0 * m * n * k * 1.0e-09;
 
@@ -61,20 +53,18 @@ int main()
 
     const int lda = k, ldb = n, ldc = n;
     /* Time the "optimized" implementation */
-    for ( rep=0; rep<NREPEATS; rep++ ){
-      copy_matrix( m, n, cold, c);
-
+    for (rep = 0; rep < NREPEATS; rep++) {
       /* Time your implementation */
       dtime = dclock();
 
-      MY_MMult( m, n, k, a, lda, b, ldb, c, ldc );
-      
+      MY_MMult(m, n, k, a, lda, b, ldb, cold, ldc);
+
       dtime = dclock() - dtime;
 
-      if ( rep==0 )
+      if (rep == 0)
         dtime_best = dtime;
       else
-	    dtime_best = ( dtime < dtime_best ? dtime : dtime_best );
+        dtime_best = (dtime < dtime_best ? dtime : dtime_best);
     }
 
     diff = compare_matrices(m, n, cold, cref);
@@ -83,8 +73,8 @@ int main()
       exit(-1);
     }
 
-    printf( "%d %le %le \n", p, gflops / dtime_best, diff );
-    fflush( stdout );
+    printf("%d %le %le \n", p, gflops / dtime_best, diff);
+    fflush(stdout);
 
     std::free(a);
     std::free(b);
@@ -92,8 +82,7 @@ int main()
     std::free(cref);
   }
 
-  printf( "];\n" );
+  printf("];\n");
 
-  exit( 0 );
+  exit(0);
 }
-

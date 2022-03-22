@@ -10,9 +10,9 @@ void REF_MMult(int m, int n, int k, float *a, float *b, float *c) {
 
 #else
 
-#define A(i, j) a[(i)*k + (j)]
-#define B(i, j) b[(i)*n + (j)]
-#define C(i, j) c[(i)*n + (j)]
+#define A(i, j) a[(i) * k + (j)]
+#define B(i, j) b[(i) * n + (j)]
+#define C(i, j) c[(i) * n + (j)]
 /* Routine for computing C = A * B + C */
 
 void REF_MMult(int m, int n, int k, float *a, float *b, float *c) {
@@ -21,9 +21,13 @@ void REF_MMult(int m, int n, int k, float *a, float *b, float *c) {
   for (i = 0; i < m; i++) {
     for (j = 0; j < n; j++) {
       for (p = 0; p < k; p++) {
-        C(i, j) = C(i, j) + A(i, p) * B(p, j);
+        C(i, j) += A(i, p) * B(p, j);
       }
     }
   }
 }
+
+#undef A
+#undef B
+#undef C
 #endif

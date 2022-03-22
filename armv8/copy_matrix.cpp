@@ -1,6 +1,6 @@
 void copy_matrix(int m, int n, float *a, float *b) {
-#define A(i, j) a[(i)*n + (j)]
-#define B(i, j) b[(i)*n + (j)]
+#define A(i, j) a[(i) * n + (j)]
+#define B(i, j) b[(i) * n + (j)]
 
   int i, j;
 

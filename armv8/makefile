@@ -1,4 +1,4 @@
-OLD  := MMult_4x4_18
+OLD  := MMult_4x4_17
 NEW  := MMult_4x4_18
 # ARCH := armv7-a
 # ARCH := aarch64
@@ -11,7 +11,7 @@ ARCH := native
 CC         := g++
 LINKER     := $(CC)
 #CFLAGS     := -O0 -g -Wall
-CFLAGS     := -std=c++17 -O2 -g -march=$(ARCH) -mfpu=neon -ftree-vectorize
+CFLAGS     := -std=c++17 -O2 -g -march=$(ARCH) -ftree-vectorize
 LDFLAGS    := -lm
 
 UTIL       := copy_matrix.o \
