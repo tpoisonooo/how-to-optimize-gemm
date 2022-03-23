@@ -1,68 +1,51 @@
-#include "Shader.hpp"
-#include "kompute/Kompute.hpp"
+#include "../Shader.hpp"
+#include "../kompute/Kompute.hpp"
 #include <iostream>
 #include <cassert>
 #include "types.h"
 
-// gflops_fmla: 3795.930664 
-void kompute(const std::string &shader) {
-  kp::Manager mgr;
-  kp::Workgroup workgroup({1, 1, 1});
-  
-  AlignVector data(32, 1.0f);
-  auto dtype = kp::Tensor::TensorDataTypes::eFloat;
-  auto tensorIn = mgr.tensor(data.data(), data.size(), sizeof(float), dtype);
+// gflops_fmla: 184.358588 
+constexpr uint32_t COUNT = 16384;
+constexpr uint32_t BLOCK = 256;
 
-  std::vector<std::shared_ptr<kp::Tensor>> params = {tensorIn};
-  constexpr float LOOP = 10000;
-  auto algorithm = mgr.algorithm(params, compileSource(shader), workgroup, {LOOP});
-  auto seq = mgr.sequence(0, 2);
+constexpr float LOOP = 3000000.0;
+
+uint64_t kompute(const std::string &filename) {
+
+  kp::Manager mgr;
+  kp::Workgroup workgroup({COUNT / BLOCK, 1, 1});
+  
+  AlignVector data1(COUNT, 1.0f);
+  AlignVector data2(COUNT, 0.0f);
+  AlignVector data3(COUNT, 0.0f);
+
+  auto dtype = kp::Tensor::TensorDataTypes::eFloat;
+  auto tensorIn1 = mgr.tensor(data1.data(), data1.size(), sizeof(float), dtype);
+  auto tensorIn2 = mgr.tensor(data2.data(), data2.size(), sizeof(float), dtype);
+  auto tensorOut = mgr.tensor(data3.data(), data3.size(), sizeof(float), dtype);
+
+  std::vector<std::shared_ptr<kp::Tensor>> params = {tensorIn1, tensorIn2, tensorOut};
+  auto algorithm = mgr.algorithm(params, compileFile(filename), workgroup, {LOOP});
+  auto seq = mgr.sequence(0, 3);
 
   seq->record<kp::OpTensorSyncDevice>(params)
       ->record<kp::OpAlgoDispatch>(algorithm)
+      ->record<kp::OpTensorSyncLocal>(params)
       ->eval();
 
-  auto timestamps = seq->getTimestamps();
-  auto time_second = (timestamps[2] - timestamps[1]);
+  float* pResult = static_cast<float*>(tensorOut->rawData());
+  for (int  i =0;  i< 10; ++i) {
+    fprintf(stdout, "%f ", pResult[i]);
+  }
 
-  fprintf(stdout, "gflops_fmla: %lf \n",  LOOP * 256 * 8/ time_second);
+  auto timestamps = seq->getTimestamps();
+  return (timestamps[3] - timestamps[0]);
 }
 
 int main() {
+  auto rw_compute_cost = kompute("gflops_fmla_1.comp");
+  auto rw_cost = kompute("gflops_fmla_2.comp");
+  fprintf(stdout, "gflops_fmla: %lf \n",  LOOP * COUNT * 10.0/ (rw_compute_cost - rw_cost));
 
-  std::string shader = (R"(
-        #version 450
-
-        layout (local_size_x = 256) in;
-        layout (set = 0, binding = 0) readonly buffer buf_in_tensor_1 { float in_tensor_1[]; };
-        layout (constant_id = 0) const float loopf = 0;
-
-        void main() {
-            float v0 = float(gl_GlobalInvocationID.x);
-            float v1, v2, v3, v4, v5, v6, v7;
-            v1 = v2 = v3 = v4 = v5 = v6 = v7 = v0;
-
-            for (float i = 0.0; i < loopf; i += 1.0) {
-              v1 = v0 + v0 * 0.01;
-              v2 = v1 + v1 * 0.01;
-              v3 = v2 + v2 * 0.01;
-              v4 = v3 + v3 * 0.01;
-              v5 = v4 + v4 * 0.01;
-              v6 = v5 + v5 * 0.01;
-              v7 = v6 + v6 * 0.01;
-              v0 = v7 + v7 * 0.01;
-            }
-
-            v0 = v1;
-            v1 = v2;
-            v2 = v3;
-            v3 = v4;
-            v4 = v5;
-            v5 = v6;
-            v6 = v7;
-            v7 = v0;
-        }
-    )");
-
-  kompute(shader);
+  return 0;
 }

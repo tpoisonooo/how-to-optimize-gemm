@@ -1,0 +1,30 @@
+#version 450
+
+layout (local_size_x = 256) in;
+layout (set = 0, binding = 0) readonly buffer buf_in_tensor_1 { float in_tensor_1[]; };
+layout (set = 0, binding = 1) readonly buffer buf_in_tensor_2 { float in_tensor_2[]; };
+layout (set = 0, binding = 2) writeonly buffer buf_out_tensor { float out_tensor[]; };
+
+layout (constant_id = 0) const float loopf = 0;
+
+void main() {
+    float a = in_tensor_1[gl_GlobalInvocationID.x];
+    float b = in_tensor_2[gl_GlobalInvocationID.x];
+    float c = 1.0;
+    int loop = int(loopf);
+
+    for (int i = 0; i < loop; ++i) {
+        c = a * c + b;
+        c = a * c + b;
+        c = a * c + b;
+        c = a * c + b;
+        c = a * c + b;
+
+        c = a * c + b;
+        c = a * c + b;
+        c = a * c + b;
+        c = a * c + b;
+        c = a * c + b;
+    }
+    out_tensor[gl_GlobalInvocationID.x] = c;
+}

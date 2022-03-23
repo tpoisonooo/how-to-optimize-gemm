@@ -4,7 +4,7 @@
 #include <cassert>
 #include "types.h"
 
-// gmem2smem 80.555740 ns
+// gmem2smem 80.194374 ns ~  72 cycle  0.899 GHz
 void kompute(const std::string &shader) {
   kp::Manager mgr;
 
@@ -30,7 +30,10 @@ void kompute(const std::string &shader) {
   assert(timestamps.size() == 3);
   auto gmem2smem = (timestamps[2] - timestamps[1]);
 
-  fprintf(stdout, "gmem2smem %f ns\n",  gmem2smem / LOOP);
+  const float ns = gmem2smem / LOOP;
+  constexpr float GHz = 921/ 1024.f; // jetson nano max_frequency.
+  const int cycle = ns * GHz;
+  fprintf(stdout, "***** gmem2smem %f ns ~ %d cycle  %0.3f GHz \n",  ns, cycle, GHz);
 }
 
 int main() {
