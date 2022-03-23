@@ -70,9 +70,7 @@ $ ./test_MMult.x
 $ python3 plot.py output_MMult_cuBLAS_1.m output_MMult_cuda_12.m
 ```
 
-3. 文档
-
-[cuda 入门的正确姿势：how-to-optimize-gemm](https://zhuanlan.zhihu.com/p/478846788)
+3. [知乎 cuda 入门的正确姿势：how-to-optimize-gemm](https://zhuanlan.zhihu.com/p/478846788)
 
 ## 四、vulkan
 build 依赖 kompute 这层 API 包装，见 [vulkan build 文档](https://github.com/tpoisonooo/how-to-optimize-gemm/tree/master/vulkan)
