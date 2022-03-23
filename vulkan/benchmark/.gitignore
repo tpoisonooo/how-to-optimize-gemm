@@ -1,7 +1,9 @@
 gflops_fmla
-gmem_latency
-gmem_bandwidth
+
 gmem_latency
 gmem_bandwidth
 gmem_banchmark
+
+smem_bandwidth
+smem_latency
 
