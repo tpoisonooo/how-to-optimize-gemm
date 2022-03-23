@@ -1,5 +1,9 @@
 # how-to-optimize-gemm
-RowMajor GEMM optimization, support armv7/armv8/cuda
+RowMajor MatMul optimization
+
+| backend | armv7-a | armv8-a | cuda | vulkan | x86 |
+| ----------- | ------------------------- | ---------- | ---------- | --------- | --- |
+| support | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | 
 
 ## 一、ARM
 ## 编译和运行
