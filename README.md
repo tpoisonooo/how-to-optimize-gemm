@@ -5,7 +5,7 @@ RowMajor MatMul optimization
 | ----------- | ------------------------- | ---------- | ---------- | --------- | --- |
 | support | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | 
 
-## 一、ARM
+## 一、ARM Cortex-A
 ## 编译和运行
 
 1. 准备 armv7/aarch64 linux 开发环境，树莓派/rk3399/aws arm server 都可以。
@@ -48,7 +48,7 @@ ARM 系列优化中文教程在
 
 chgemm 已合入[ncnn](https://github.com/tencent/ncnn) INT8 卷积实现。
 
-## 三、cuda
+## 三、CUDA
 
 1. 需自行安装 cuda 驱动和 OpenBLAS 做 baseline
 2. 首次运行需要 `makefile` 里改成同一个代码版本，例如
@@ -72,7 +72,7 @@ $ python3 plot.py output_MMult_cuBLAS_1.m output_MMult_cuda_12.m
 
 3. [知乎 cuda 入门的正确姿势：how-to-optimize-gemm](https://zhuanlan.zhihu.com/p/478846788)
 
-## 四、vulkan
+## 四、Vulkan
 build 依赖 kompute 这层 API 包装，见 [vulkan build 文档](https://github.com/tpoisonooo/how-to-optimize-gemm/tree/master/vulkan)
 
 
