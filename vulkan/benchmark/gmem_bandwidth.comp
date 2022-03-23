@@ -1,0 +1,14 @@
+#version 450
+#pragma use_vulkan_memory_model
+
+layout (local_size_x = 256) in;
+
+// The input tensors bind index is relative to index in parameter passed
+layout(set = 0, binding = 0) buffer buf_in_a { float in_a[]; };
+layout(set = 0, binding = 1) buffer buf_in_b { float in_b[]; };
+layout(set = 0, binding = 2) buffer buf_out_a { float out_a[]; };
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    out_a[index] = in_a[index];
+}

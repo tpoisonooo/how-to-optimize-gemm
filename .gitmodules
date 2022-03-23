@@ -1,3 +1,9 @@
 [submodule "x86"]
 	path = x86
 	url = https://github.com/flame/how-to-optimize-gemm
+	shallow = true
+[submodule "kompute"]
+	shallow = true
+[submodule "OpenBLAS-0.2.20"]
+	path = OpenBLAS-0.2.20
+	url = https://github.com/tpoisonooo/OpenBLAS
