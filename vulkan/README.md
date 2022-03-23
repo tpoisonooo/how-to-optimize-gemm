@@ -34,6 +34,7 @@ Now we have `libkompute.a` and `glslangValidator`, edit makefile and compile our
 ```bash
 $ vim makefile
 #  update KOMPUTE_BUILD
+$ export CPLUS_INCLUDE_PATH=`pwd`
 $ make
 ...
 ```
