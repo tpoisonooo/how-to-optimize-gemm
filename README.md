@@ -3,7 +3,7 @@ RowMajor MatMul optimization
 
 | backend | armv7-a | armv8-a | cuda | vulkan | x86 |
 | ----------- | ------------------------- | ---------- | ---------- | --------- | --- |
-| support | ✔️ | ✔️ | ✔️ | ✔️ | ✔️ | 
+| support | ✔️ | ✔️ | ✔️ | ✔️ | ✅ | 
 
 ## 一、ARM Cortex-A
 ## 编译和运行
