@@ -20,9 +20,6 @@ TEST_OBJS  := test_MMult.o $(NEW).o
 %.o: %.cpp
 	$(CC) $(CFLAGS) $(GENCODE_FLAGS)  -c $< -o $@
 
-%.o: %.cu
-	$(CC) $(CFLAGS) $(GENCODE_FLAGS)  -c $< -o $@
-
 all: 
 	make clean;
 	make test_MMult.x
