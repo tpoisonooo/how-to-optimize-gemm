@@ -1,5 +1,4 @@
 #version 450
-#pragma use_vulkan_memory_model
 
 layout (local_size_x = 256) in;
 

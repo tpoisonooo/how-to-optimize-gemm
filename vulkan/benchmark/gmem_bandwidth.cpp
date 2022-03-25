@@ -4,6 +4,7 @@
 #include <cassert>
 #include "types.h"
 
+
 void kompute(const std::string &shader) {
   kp::Manager mgr;
 

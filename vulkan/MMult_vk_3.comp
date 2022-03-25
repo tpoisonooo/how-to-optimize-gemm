@@ -1,0 +1,35 @@
+#version 450
+
+layout (local_size_x = 16, local_size_y = 16) in;
+
+layout (set = 0, binding = 0) readonly buffer buf_in_tensor_1 { vec4 in_tensor_a[]; };
+layout (set = 0, binding = 1) readonly buffer buf_in_tensor_2 { float in_tensor_b[]; };
+layout (set = 0, binding = 2) writeonly buffer buf_out_tensor { float out_tensor[]; };
+
+layout (constant_id = 0) const float tensor_size_f = 0;
+
+void main()
+{
+    uint block = 16;
+    uint tensor_size = uint(tensor_size_f);
+    uint lda = tensor_size / 4;
+    uint ldb = tensor_size;
+    uint ldc = tensor_size;
+    uint loop_k = tensor_size / 4;
+
+    uint globalRow = gl_WorkGroupID.x * block + gl_LocalInvocationID.x;
+    uint globalCol = gl_WorkGroupID.y * block +gl_LocalInvocationID.y;
+    
+    float acc = 0.0;
+    for(uint k = 0u; k < loop_k; k++) {
+        vec4 a = in_tensor_a[(globalCol * lda) + k];
+        vec4 b;
+        b.r = in_tensor_b[(k * 4 * ldb) + globalRow];
+        b.g = in_tensor_b[((k * 4 + 1) * ldb) + globalRow];
+        b.b = in_tensor_b[((k * 4 + 2)* ldb) + globalRow];
+        b.a = in_tensor_b[((k * 4 + 3)* ldb) + globalRow];
+
+        acc += dot(a, b);
+    }
+    out_tensor[(globalCol * ldc) + globalRow] = acc;
+}

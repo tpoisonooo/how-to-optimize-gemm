@@ -27,7 +27,7 @@ void main() {
         sub_tensor_1[threadID.y][threadID.x] = in_tensor_1[tensor_size * globalCol + i * block + threadID.x];
         sub_tensor_2[threadID.y][threadID.x] = in_tensor_2[tensor_size * (i * block + threadID.y) + globalRow];
 
-        memoryBarrierShared();
+        // memoryBarrierShared();
         barrier();
 
         for (uint k = 0u; k < block; ++k) {
