@@ -1,0 +1,31 @@
+#version 450
+#pragma use_vulkan_memory_model
+
+layout (local_size_x = 32) in;
+
+// The input tensors bind index is relative to index in parameter passed
+layout(set = 0, binding = 0) buffer buf_in_a { float in_a[]; };
+layout (constant_id = 0) const float tensor_size_f = 0;
+
+shared vec4 sub_tensor_1[64][2];
+
+void main() {
+    uint index = gl_GlobalInvocationID.x;
+    uint loop = uint(tensor_size_f);
+    for (uint x = 0; x < loop; ++x) {
+        vec4 val0;
+        val0.r = in_a[index];
+        val0.g = in_a[index  + 32];
+        val0.b = in_a[index + 64];
+        val0.a = in_a[index + 96];
+        sub_tensor_1[index][0] = val0;
+
+        vec4 val1;
+        val1.r = in_a[index + 128];
+        val1.g = in_a[index  + 160];
+        val1.b = in_a[index + 192];
+        val1.a = in_a[index + 224];
+        sub_tensor_1[index][1] = val1;
+        barrier();
+    }
+}

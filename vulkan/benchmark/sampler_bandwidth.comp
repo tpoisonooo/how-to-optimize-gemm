@@ -1,19 +1,20 @@
 #version 450
-#pragma use_vulkan_memory_model
 
-layout (local_size_x = 256) in;
+layout (local_size_x = 64) in;
 
 // The input tensors bind index is relative to index in parameter passed
-layout(set = 0, binding = 0) buffer buf_in_a { float in_a[]; };
+layout (binding = 0) uniform sampler2D in_a;
 layout (constant_id = 0) const float tensor_size_f = 0;
 
-shared float sub_tensor_1[256];
+shared vec4 sub_tensor_1[64];
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
     uint loop = uint(tensor_size_f);
     for (uint x = 0; x < loop; ++x) {
-        sub_tensor_1[index] = in_a[index];
+
+        ivec2 ipos =  ivec2(index, 0);
+        sub_tensor_1[index] = texelFetch(in_a, ipos, 0);
         barrier();
     }
 }

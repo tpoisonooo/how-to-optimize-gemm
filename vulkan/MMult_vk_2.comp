@@ -30,9 +30,27 @@ void main() {
         // memoryBarrierShared();
         barrier();
 
+#if 1
         for (uint k = 0u; k < block; ++k) {
             acc += sub_tensor_1[threadID.y][k] * sub_tensor_2[k][threadID.x];
         }
+#else
+        for (uint k = 0u; k < block; k+=4) {
+            vec4 a;
+            a.r = sub_tensor_1[threadID.y][k];
+            a.g = sub_tensor_1[threadID.y][k+1];
+            a.b = sub_tensor_1[threadID.y][k+2];
+            a.a = sub_tensor_1[threadID.y][k+3];
+
+            vec4 b;
+            b.r = sub_tensor_2[k][threadID.x];
+            b.g = sub_tensor_2[k+1][threadID.x];
+            b.b = sub_tensor_2[k+2][threadID.x];
+            b.a = sub_tensor_2[k+3][threadID.x];
+            
+            acc += dot(a, b);
+        }
+#endif
         barrier();
     }
 
