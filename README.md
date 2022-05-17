@@ -75,4 +75,5 @@ $ python3 plot.py output_MMult_cuBLAS_1.m output_MMult_cuda_12.m
 ## 四、Vulkan
 build 依赖 kompute 这层 API 包装，见 [vulkan build 文档](https://github.com/tpoisonooo/how-to-optimize-gemm/tree/master/vulkan)
 
+[知乎 如何火急火燎地上手 Vulkan](https://zhuanlan.zhihu.com/p/487583258)
 
