@@ -77,3 +77,7 @@ build 依赖 kompute 这层 API 包装，见 [vulkan build 文档](https://githu
 
 [知乎 如何火急火燎地上手 Vulkan](https://zhuanlan.zhihu.com/p/487583258)
 
+
+## 五、TODO list
+* refactor aarch64 part
+* add cuda-int4
