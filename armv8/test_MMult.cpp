@@ -55,10 +55,10 @@ int main() {
     /* Time the "optimized" implementation */
     for (rep = 0; rep < NREPEATS; rep++) {
       /* Time your implementation */
+      std::memset(cold, 0, mem_size_C);
+
       dtime = dclock();
-
       MY_MMult(m, n, k, a, lda, b, ldb, cold, ldc);
-
       dtime = dclock() - dtime;
 
       if (rep == 0)
@@ -68,7 +68,7 @@ int main() {
     }
 
     diff = compare_matrices(m, n, cold, cref);
-    if (diff > 0.5f || diff < -0.5f) {
+    if (diff > 0.1f || diff < -0.1f) {
       fprintf(stdout, "%d diff too big: %le\n", p, diff);
       exit(-1);
     }
