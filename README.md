@@ -86,3 +86,8 @@ build 依赖 kompute 这层 API 包装，见 [vulkan build 文档](https://githu
 ## 五、CUDA int4
 向 megengine 学习 int4 训练和优化， WIP
 
+## 介绍一些工具
+
+[MegPeak](https://github.com/MegEngine/MegPeak): 测量硬件极限性能用，支持 arm/x86/OCL..
+
+[perf]: linux 基本包里就有，做系统级性能分析，可反汇编
