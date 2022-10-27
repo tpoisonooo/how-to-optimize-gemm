@@ -37,6 +37,7 @@ ARM 系列优化中文教程在
 1. 处理了边界问题，不像教程里只考虑尺寸为 4 的倍数的情况;
 2. int8 最高达到了 18.6 gflops（相对 fp32 理论极限只有14.3，gemmlowp大约 12-14gflops）;
 3. 基于对称量化原理，输入数值范围必须在 \[-127, +127\]，不能出现 -128；
+4. 内置小例子，如何集成到 android studio （啊似乎是安卓开发的活儿）
 
 chgemm 已合入[ncnn](https://github.com/tencent/ncnn) INT8 卷积实现。
 
