@@ -7,3 +7,6 @@
 [submodule "OpenBLAS-0.2.20"]
 	path = OpenBLAS-0.2.20
 	url = https://github.com/tpoisonooo/OpenBLAS
+[submodule "aarch64-int8"]
+	path = aarch64-int8
+	url = https://github.com/tpoisonooo/chgemm

@@ -12,16 +12,16 @@ values.  If the value equals "-1" then that dimension is bound to the
 index p, given above.
 */
 
-#define M -1
-#define N -1
-#define K -1
+#define M 100
+#define N 200
+#define K 300
 
 /* 
 In the test driver, each experiment is repeated NREPEATS times and
 the best time from these repeats is used to compute the performance
 */
 
-#define NREPEATS 1 
+#define NREPEATS 10
 
 /* 
 Matrices A, B, and C are stored in two dimensional arrays with

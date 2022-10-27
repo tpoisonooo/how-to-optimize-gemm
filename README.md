@@ -38,7 +38,7 @@ ARM 系列优化中文教程在
 3. [ARMv7 4x4kernel 懒人优化小实践](https://zhuanlan.zhihu.com/p/333799799)
 
 
-## 二、int8 GEMM
+## 二、aarch64 int8 
 自 [知乎 GEMM 入门](https://zhuanlan.zhihu.com/p/65436463) 发布后，有不少同学问如何写一个 int8 gemm。俺写好了~~~
 
 [chgemm](https://github.com/tpoisonooo/chgemm) 是个可用的 int8 gemm 库。相对于本教程中的代码，区别在于:
