@@ -27,7 +27,7 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
 
   // bigger split
   for (float *a_ptr = begin_a, *b_ptr = begin_b; a_ptr < end_a;
-       a_ptr += 64, b_ptr += 64 * k) {
+       a_ptr += 64, b_ptr += 64 * n) {
 
 #pragma unroll
     for (int i = 0; i < 2; ++i) {

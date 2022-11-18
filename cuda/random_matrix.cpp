@@ -2,8 +2,8 @@
 
 #define A(i, j) a[(j)*lda + (i)]
 
+double drand48();
 void random_matrix(int m, int n, float *a, int lda) {
-  double drand48();
   int i, j;
 
   for (i = 0; i < m; i++)
