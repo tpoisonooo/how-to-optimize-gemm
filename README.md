@@ -81,18 +81,18 @@ chgemm has been merged into [ncnn](https://github.com/tencent/ncnn) INT8 convolu
 3. The boundary problem is not dealt with now, only the case where MNK is a multiple of 4 is considered; `sub_kernel` also only writes the simplest kind of assembly. Practical needs a simple adjustment;
 4. In terms of drawing, `octave` was discarded (it is too troublesome to configure the environment once for embedded devices), and `python` was used instead.
 
-## 3. CUDA
+## 4. CUDA
 This version is **faster than NVIDIA cuBLAS**
 1. Need to install cuda driver and nvcc by yourself
 2. CPU OpenBLAS is required to do the baseline to verify that the values are correct
 
-## 4. Vulkan
+## 5. Vulkan
 
 1. vulkan build depends on kompute API packaging, see [vulkan build documentation](https://github.com/tpoisonooo/how-to-optimize-gemm/tree/master/vulkan) for details
 
 2. More about how to learn compute shader
 
-## 5. CUDA int4
+## 6. CUDA int4
 
 WIP
 
