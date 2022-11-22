@@ -12,7 +12,7 @@ LINKER     := $(CC)
 #CFLAGS     := -O0 -g -Wall
 $(foreach sm,$(SMS),$(eval GENCODE_FLAGS += -gencode arch=compute_$(sm),code=sm_$(sm)))
 # CFLAGS     := -std=c++17 -O0 -g -G
-CFLAGS     := -std=c++17 -O0 -g -G
+CFLAGS     := -std=c++17 -O2
 LDFLAGS    := -lm  -lcublas  -lopenblas
 
 UTIL       := copy_matrix.o \
