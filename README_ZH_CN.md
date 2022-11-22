@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文]
 
-RowMajor MatMul optimization
+row-major matmul optimization
 
 | backend | armv7 | aarch64 | aarh64-int8 | cuda | cuda-int4 | vulkan | x86 |
 | ----------- | ------- | -- | ---------- | ---------- | ---------- | --------- | --- |
