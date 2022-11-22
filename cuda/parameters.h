@@ -12,7 +12,7 @@ values.  If the value equals "-1" then that dimension is bound to the
 index p, given above.
 */
 
-#define M -1
+#define M -1 
 #define N -1
 #define K -1
 
@@ -21,7 +21,7 @@ In the test driver, each experiment is repeated NREPEATS times and
 the best time from these repeats is used to compute the performance
 */
 
-#define NREPEATS 80
+#define NREPEATS 20
 
 /* 
 Matrices A, B, and C are stored in two dimensional arrays with
@@ -34,13 +34,3 @@ the matrix tends to adversely affect performance.  LDX equals the
 leading dimension of the array that stores matrix X.  If LDX=-1 
 then the leading dimension is set to the row dimension of matrix X.
 */
-
-#if 0
-#define LDA 1000
-#define LDB 1000
-#define LDC 1000
-#else
-#define LDA -1 
-#define LDB -1 
-#define LDC -1 
-#endif

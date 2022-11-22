@@ -13,6 +13,7 @@ void MY_MMult(cublasHandle_t handle, int m, int n, int k, float *d_A, int lda,
 
   const float alpha = 1.0f;
   const float beta = 0.0f;
+
   checkCudaErrors(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k, &alpha,
-                              d_B, n, d_A, m, &beta, d_C, k));
+                              d_B, n, d_A, k, &beta, d_C, n));
 }
