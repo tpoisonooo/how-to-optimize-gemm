@@ -32,7 +32,7 @@ int main() {
   printf("GPU Device %d: \"%s\" with compute capability %d.%d\n\n", devID,
          deviceProp.name, deviceProp.major, deviceProp.minor);
 
-  int p, m, n, k, lda, ldb, ldc, rep;
+  int p, m, n, k, rep;
 
   double dtime, dtime_best, gflops, diff;
 
@@ -59,16 +59,14 @@ int main() {
 
     gflops = 2.0 * m * n * k * 1.0e-09;
 
-    lda = (LDA == -1 ? m : LDA);
-    ldb = (LDB == -1 ? k : LDB);
-    ldc = (LDC == -1 ? m : LDC);
+    const int lda = k, ldb = n, ldc = n;
 
     /* Allocate space for the matrices */
     /* Note: I create an extra column in A to make sure that
        prefetching beyond the matrix does not cause a segfault */
-    const size_t mem_size_A = lda * (k + 1) * sizeof(float);
-    const size_t mem_size_B = ldb * n * sizeof(float);
-    const size_t mem_size_C = ldc * n * sizeof(float);
+    const size_t mem_size_A = m * k * sizeof(float);
+    const size_t mem_size_B = k * n * sizeof(float);
+    const size_t mem_size_C = m * n * sizeof(float);
     a = (float *)malloc(mem_size_A);
     b = (float *)malloc(mem_size_B);
     c = (float *)malloc(mem_size_C);
@@ -76,9 +74,9 @@ int main() {
     cref = (float *)malloc(mem_size_C);
 
     /* Generate random matrices A, B, Cold */
-    random_matrix(m, k, a, lda);
-    random_matrix(k, n, b, ldb);
-    random_matrix(m, n, cold, ldc);
+    random_matrix(m, k, a, m);
+    random_matrix(k, n, b, k);
+    random_matrix(m, n, cold, n);
     memset(cold, 0, mem_size_C);
     memset(cref, 0, mem_size_C);
 
@@ -101,7 +99,7 @@ int main() {
 
     for (rep = 0; rep < NREPEATS; rep++) {
       /* Time your implementation */
-      MY_MMult(handle, m, n, k, d_A, lda, d_B, ldb, d_C, ldc);
+      MY_MMult(handle, m, n, k, d_A, k, d_B, n, d_C, n);
     }
 
     // printf( "mymmult\n");

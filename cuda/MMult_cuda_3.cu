@@ -8,8 +8,7 @@
 
 // a = mxk, b = kxn
 template <int BLOCK>
-__global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
-                      float *c, int ldc) {
+__global__ void sgemm(int m, int n, int k, float *a, float *b, float *c) {
   // blockIdx control subpanel matrix
 
   const int tx = threadIdx.x;
@@ -17,13 +16,15 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
   const int bx = blockIdx.x;
   const int by = blockIdx.y;
 
-  float *begin_a = a + by * BLOCK * k;
-  float *begin_b = b + bx * BLOCK;
+  float *begin_a = a + bx * BLOCK * k;
+  float *begin_b = b + by * BLOCK;
   float *end_a = begin_a + k;
 
   float sum = 0.f;
+
   for (float *a_ptr = begin_a, *b_ptr = begin_b; a_ptr < end_a;
        a_ptr += BLOCK, b_ptr += BLOCK * n) {
+
     __shared__ float ashare[BLOCK][BLOCK];
     __shared__ float bshare[BLOCK][BLOCK];
 
@@ -38,7 +39,7 @@ __global__ void sgemm(int m, int n, int k, float *a, int lda, float *b, int ldb,
     __syncthreads();
   }
 
-  c[(BLOCK * by + ty) * n + BLOCK * bx + tx] = sum;
+  c[(BLOCK * bx + ty) * n + BLOCK * by + tx] = sum;
 }
 
 void MY_MMult(cublasHandle_t handle, int m, int n, int k, float *d_A, int lda,
@@ -48,5 +49,5 @@ void MY_MMult(cublasHandle_t handle, int m, int n, int k, float *d_A, int lda,
   dim3 block(BLOCK, BLOCK);
   dim3 grid((m + BLOCK - 1) / BLOCK, (n + BLOCK - 1) / BLOCK);
 
-  sgemm<BLOCK><<<grid, block>>>(m, n, k, d_A, lda, d_B, ldb, d_C, ldc);
+  sgemm<BLOCK><<<grid, block>>>(m, n, k, d_A, d_B, d_C);
 }
