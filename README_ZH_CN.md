@@ -85,9 +85,6 @@ x86 引用的 [flame](https://github.com/flame/how-to-optimize-gemm/tree/4fcf39b
 ## 3. CUDA
 cuda 版**超过 NVIDIA cuBLAS 的速度**
 
-
-This version is **faster than NVIDIA cuBLAS**
-
 * 绿色的是自己的实现
 * 蓝色的是 cuBLAS
 * 都是 3080 不带 tensorcore
