@@ -64,7 +64,13 @@ $ cd armv8 && make run
 
 ## 2. aarch64 int8
 
-[chgemm](https://github.com/tpoisonooo/chgemm) is an int8 gemm library. Compared to the code in this tutorial, the differences are:
+[chgemm](https://github.com/tpoisonooo/chgemm) is an int8 gemm library. 
+
+* blue line is chgemm implementation
+* orange line is aarch64 fp32 peak
+![](./images/aarch64-fp32-peak-vs-int8.png)
+
+Compared to the code in this tutorial, the differences are:
 1. Dealing with the boundary problem, unlike the tutorial where only multiples of 4 are considered;
 2. Int8 reaches a maximum of 18.6 gflops (relative to the theoretical limit of fp32 is only 14.3 on RK3399, gemmlowp is about 12-14gflops);
 3. Based on symmetric quantization, input value range must be in \[-127, +127\], and -128 cannot appear;
