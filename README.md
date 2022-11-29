@@ -83,6 +83,12 @@ chgemm has been merged into [ncnn](https://github.com/tencent/ncnn) INT8 convolu
 
 ## 4. CUDA
 This version is **faster than NVIDIA cuBLAS**
+
+* green line is MMult_cuda_12 without tensorcore
+* blue line is cuBLAS without tensorcore
+
+![](images/cublas-vs-MMult_cuda_12.jpg)
+
 1. Need to install cuda driver and nvcc by yourself
 2. CPU OpenBLAS is required to do the baseline to verify that the values are correct
 
@@ -100,3 +106,4 @@ WIP
 
 * [megpeak](https://github.com/MegEngine/MegPeak): For measuring hardware limit performance, support arm/x86/OCL..
 * [perf](https://perf.wiki.kernel.org): Available in linux system tools, for system-level performance analysis and disassembly
+* [YHs_Sample](https://github.com/Yinghan-Li/YHs_Sample): dalao 's implementation

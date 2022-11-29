@@ -84,6 +84,16 @@ x86 引用的 [flame](https://github.com/flame/how-to-optimize-gemm/tree/4fcf39b
 
 ## 3. CUDA
 cuda 版**超过 NVIDIA cuBLAS 的速度**
+
+
+This version is **faster than NVIDIA cuBLAS**
+
+* 绿色的是自己的实现
+* 蓝色的是 cuBLAS
+* 都是 3080 不带 tensorcore
+
+![](images/cublas-vs-MMult_cuda_12.jpg)
+
 1. 需自行安装 cuda 驱动和 nvcc
 2. 需要 CPU OpenBLAS 做 baseline，验证数值正确
 
@@ -102,3 +112,4 @@ WIP
 * [megpeak](https://github.com/MegEngine/MegPeak): 测量硬件极限性能用，支持 arm/x86/OCL..
 
 * [perf](https://perf.wiki.kernel.org): linux 基本包里就有，做系统级性能分析，可反汇编
+* [YHs_Sample](https://github.com/Yinghan-Li/YHs_Sample): 巨佬的实现
