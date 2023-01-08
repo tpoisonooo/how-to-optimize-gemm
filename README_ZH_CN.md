@@ -4,7 +4,7 @@
 
 row-major matmul optimization
 
-| backend | armv7 | aarch64 | aarh64-int8 | cuda | cuda-int4 | vulkan | x86 |
+| backend | armv7 | aarch64 | aarch64-int8 | cuda | cuda-int4 | vulkan | x86 |
 | ----------- | ------- | -- | ---------- | ---------- | ---------- | --------- | --- |
 | support | ✔️ | ✔️ | ✔️ | ✔️ | WIP | ✔️ | ✅ | 
 
