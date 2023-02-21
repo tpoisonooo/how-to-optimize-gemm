@@ -96,7 +96,12 @@ This version is **faster than NVIDIA cuBLAS**
 ![](images/cublas-vs-MMult_cuda_12.jpg)
 
 1. Need to install cuda driver and nvcc by yourself
-2. CPU OpenBLAS is required to do the baseline to verify that the values are correct
+2. CPU OpenBLAS is required to be the baseline
+
+```bash
+$ apt install libopenblas-dev
+```
+
 
 ## 5. Vulkan
 
