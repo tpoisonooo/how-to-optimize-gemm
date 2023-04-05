@@ -113,8 +113,11 @@ $ apt install libopenblas-dev
 
 WIP
 
-## Introduce some tools
+## Some Tools
 
 * [megpeak](https://github.com/MegEngine/MegPeak): For measuring hardware limit performance, support arm/x86/OCL..
 * [perf](https://perf.wiki.kernel.org): Available in linux system tools, for system-level performance analysis and disassembly
 * [YHs_Sample](https://github.com/Yinghan-Li/YHs_Sample): dalao 's implementation
+
+## License
+[GPLv3](LICENSE)
