@@ -2,7 +2,7 @@
 
 [English](README.md) | [简体中文]
 
-row-major matmul optimization
+行主序矩阵乘法优化教程
 
 | backend | armv7 | aarch64 | aarch64-int8 | cuda | cuda-int4 | vulkan | x86 |
 | ----------- | ------- | -- | ---------- | ---------- | ---------- | --------- | --- |
