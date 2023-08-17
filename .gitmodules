@@ -10,3 +10,6 @@
 [submodule "aarch64-int8"]
 	path = aarch64-int8
 	url = https://github.com/tpoisonooo/chgemm
+[submodule "mperf"]
+	path = mperf
+	url = https://github.com/tpoisonooo/mperf

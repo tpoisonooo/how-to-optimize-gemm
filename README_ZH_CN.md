@@ -2,6 +2,11 @@
 
 [English](README.md) | [简体中文]
 
+## 更新
+2023/08 aarch64 加了 cmake 和 mperf，用 `-DMPERF_ENABLE=ON` 打开编译，这样性能优化才有根据。
+
+## 简介
+
 行主序矩阵乘法优化教程
 
 | backend | armv7 | aarch64 | aarch64-int8 | cuda | cuda-int4 | vulkan | x86 |
@@ -116,3 +121,7 @@ WIP
 
 * [perf](https://perf.wiki.kernel.org): linux 基本包里就有，做系统级性能分析，可反汇编
 * [YHs_Sample](https://github.com/Yinghan-Li/YHs_Sample): 巨佬的实现
+* [mperf](https://github.com/MegEngine/mperf): 性能优化指南
+
+## License
+[GPLv3](LICENSE)

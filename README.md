@@ -2,6 +2,12 @@
 
 English | [简体中文](README_ZH_CN.md)
 
+## News
+
+2023/08 aarch64 add cmake and mperf, try `-DMPERF_ENABLE=ON` !
+
+## Introduction
+
 row-major matmul optimization tutorial
 
 | backend | armv7 | aarch64 | aarch64-int8 | cuda | cuda-int4 | vulkan | x86 |
@@ -118,6 +124,8 @@ WIP
 * [megpeak](https://github.com/MegEngine/MegPeak): For measuring hardware limit performance, support arm/x86/OCL..
 * [perf](https://perf.wiki.kernel.org): Available in linux system tools, for system-level performance analysis and disassembly
 * [YHs_Sample](https://github.com/Yinghan-Li/YHs_Sample): dalao 's implementation
+
+* [mperf](https://github.com/MegEngine/mperf): optimization tools
 
 ## License
 [GPLv3](LICENSE)
