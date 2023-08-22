@@ -2,9 +2,9 @@
 In the test driver, there is a loop "for ( p=PFIRST; p<= PLAST; p+= PINC )"
 The below parameters set this range of values that p takes on 
 */   
-#define PFIRST 40
-#define PLAST  800
-#define PINC   40 
+#define PFIRST 48
+#define PLAST  960
+#define PINC   48
 
 /* 
 In the test driver, the m, n, and k dimensions are set to the below 
@@ -12,9 +12,9 @@ values.  If the value equals "-1" then that dimension is bound to the
 index p, given above.
 */
 
-#define M 100
-#define N 200
-#define K 300
+#define M -1
+#define N -1
+#define K -1
 
 /* 
 In the test driver, each experiment is repeated NREPEATS times and
