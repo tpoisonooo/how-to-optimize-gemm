@@ -3,7 +3,7 @@
 ## Fetch Vulkan SDK
 
 ```bash
-$  wget https://sdk.lunarg.com/sdk/download/1.3.204.1/linux/vulkansdk-linux-x86_64-1.3.204.1.tar.gz
+$ wget https://sdk.lunarg.com/sdk/download/1.3.204.1/linux/vulkansdk-linux-x86_64-1.3.204.1.tar.gz
 $ tar xvf vulkansdk-linux-x86_64-1.3.204.1.tar.gz
 $ export VULKAN_SDK=/path/to/1.3.204.1/x86_64
 ```
