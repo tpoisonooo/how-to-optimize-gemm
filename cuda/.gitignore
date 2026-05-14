@@ -1,2 +1,3 @@
 .vscode/
 run.sh
+output_MMult_cu*

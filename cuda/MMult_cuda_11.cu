@@ -15,6 +15,9 @@
 #define SMEM_LDB (128)
 #define SMEM_LDC (64)
 
+#define ASIZE (SMEM_LDA * 8 * sizeof(float))
+#define BSIZE (SMEM_LDB * 8 * sizeof(float))
+
 // remove original guard
 __device__ __forceinline__ void ldg32_nc_0(float &reg, const void *ptr) {
   asm volatile("{.reg .pred p;\n"
@@ -74,32 +77,20 @@ __device__ __forceinline__ void sts32(const float &reg, const uint32_t &addr) {
   asm volatile("st.shared.f32 [%0], %1;\n" : : "r"(addr), "f"(reg));
 }
 
-// MY_MMult = [
-// 1024 12648.06 7.247925e-05
-// 2048 16879.70 1.525879e-04
-// 3072 17011.95 2.288818e-04
-// 4096 16993.88 4.425049e-04
-// ];
-/**
- * version 11 相对于 version 10 的特点是
- * 1. 引入 gmem --- smem ping-pong， 没效果
- * 2. SMEM_LDA 改 132， 有效果.... **目前无法理解**
- * 3. 写回 C 矩阵时，引入 st128 方式，直接写入 global 地址，有效果。目前卡在
- * writeback 方式上
- * 4. 更进一步地，先借助  uint32_t 写入 smem，sync 一下，再写入  gmem.  无效果.
- * 5. ldgsts
- */
 __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
                                                           const float *a,
                                                           const float *b,
                                                           float *c) {
 
-  __shared__ __align__(
-      16 * 1024) char smem[24 * 1024]; // 16KB shared memory for buffer
+  __shared__ __align__(16 * 1024) char smem[24 * 1024];
 
-  float *ashare = reinterpret_cast<float *>(smem);
-  float *bshare =
-      reinterpret_cast<float *>(smem + 16 * 1024); // 8k shared mem for B
+  float *ashare[2];
+  float *bshare[2];
+  ashare[0] = reinterpret_cast<float *>(smem);
+  ashare[1] = reinterpret_cast<float *>(smem + ASIZE);
+  bshare[0] = reinterpret_cast<float *>(smem + 2 * ASIZE);
+  bshare[1] = reinterpret_cast<float *>(smem + 2 * ASIZE + BSIZE);
+
   float sum[8][8] = {0};
   float panelA[8] = {0}, panelB[8] = {0};
 
@@ -108,57 +99,61 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
 
   float a_ldg_reg[4], b_ldg_reg[4];
 
-  uint32_t a_sts_addr = smem_u32addr(ashare + (threadIdx.x % 8) * SMEM_LDA +
-                                     (threadIdx.x / 8) * 4);
-  uint32_t b_sts_addr =
-      smem_u32addr(bshare + (threadIdx.x / 32) * SMEM_LDB + (threadIdx.x % 32));
+  uint32_t a_sts_addr[2];
+  uint32_t b_sts_addr[2];
+  uint32_t aptr_base[2];
+  uint32_t bptr_base[2];
 
-  uint32_t aptr_base = smem_u32addr(ashare + (threadIdx.x / 16) * 4);
-  uint32_t bptr_base = smem_u32addr(bshare + (threadIdx.x % 16) * 4);
+  a_sts_addr[0] = smem_u32addr(ashare[0] + (threadIdx.x % 8) * SMEM_LDA +
+                               (threadIdx.x / 8) * 4);
+  a_sts_addr[1] = smem_u32addr(ashare[1] + (threadIdx.x % 8) * SMEM_LDA +
+                               (threadIdx.x / 8) * 4);
+  b_sts_addr[0] =
+      smem_u32addr(bshare[0] + (threadIdx.x / 32) * SMEM_LDB + (threadIdx.x % 32));
+  b_sts_addr[1] =
+      smem_u32addr(bshare[1] + (threadIdx.x / 32) * SMEM_LDB + (threadIdx.x % 32));
 
-  {
-// load first
-// load gmem to smem for ashare
+  aptr_base[0] = smem_u32addr(ashare[0] + (threadIdx.x / 16) * 4);
+  aptr_base[1] = smem_u32addr(ashare[1] + (threadIdx.x / 16) * 4);
+  bptr_base[0] = smem_u32addr(bshare[0] + (threadIdx.x % 16) * 4);
+  bptr_base[1] = smem_u32addr(bshare[1] + (threadIdx.x % 16) * 4);
+
+  // preload first panel into buffer 0
 #pragma unroll
-    for (int i = 0; i < 4; ++i) {
-      ldg32_nc_0(a_ldg_reg[i],
-                 (const char *)(a + from_a) + i * k * sizeof(float));
-    }
-    sts128(a_ldg_reg[0], a_ldg_reg[1], a_ldg_reg[2], a_ldg_reg[3], a_sts_addr);
-
-// load gmem to smem for bshare
-#pragma unroll
-    for (int i = 0; i < 4; ++i) {
-      ldg32_nc_0(b_ldg_reg[i],
-                 (const char *)(b + from_b) + i * 32 * sizeof(float));
-    }
-#pragma unroll
-    for (int i = 0; i < 4; ++i) {
-      sts32(b_ldg_reg[i], b_sts_addr + i * 32 * sizeof(float));
-    }
-    __syncthreads();
-    // add offset and flip flag
-    from_a += 8;
-    from_b += 8 * n;
-
-    aptr_base ^= 0x2000;
-    bptr_base ^= 0x1000;
-    a_sts_addr ^= 0x2000;
-    b_sts_addr ^= 0x1000;
+  for (int i = 0; i < 4; ++i) {
+    ldg32_nc_0(a_ldg_reg[i],
+               (const char *)(a + from_a) + i * k * sizeof(float));
   }
+  sts128(a_ldg_reg[0], a_ldg_reg[1], a_ldg_reg[2], a_ldg_reg[3], a_sts_addr[0]);
+
+#pragma unroll
+  for (int i = 0; i < 4; ++i) {
+    ldg32_nc_0(b_ldg_reg[i],
+               (const char *)(b + from_b) + i * 32 * sizeof(float));
+  }
+#pragma unroll
+  for (int i = 0; i < 4; ++i) {
+    sts32(b_ldg_reg[i], b_sts_addr[0] + i * 32 * sizeof(float));
+  }
+
+  from_a += 8;
+  from_b += 8 * n;
+
+  int write_ping = 1;
+  int read_ping = 0;
 
   for (int loop = 0; loop < k; loop += 8) {
     __syncthreads();
     if (loop < k - 8) {
-      // if have more, load next
+      // load next panel into write_ping buffer
 #pragma unroll
       for (int i = 0; i < 4; ++i) {
         ldg32_nc_0(a_ldg_reg[i],
                    (const char *)(a + from_a) + i * k * sizeof(float));
       }
       sts128(a_ldg_reg[0], a_ldg_reg[1], a_ldg_reg[2], a_ldg_reg[3],
-             a_sts_addr);
-// load gmem to smem for bshare
+             a_sts_addr[write_ping]);
+
 #pragma unroll
       for (int i = 0; i < 4; ++i) {
         ldg32_nc_0(b_ldg_reg[i],
@@ -166,33 +161,27 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
       }
 #pragma unroll
       for (int i = 0; i < 4; ++i) {
-        sts32(b_ldg_reg[i], b_sts_addr + i * 32 * sizeof(float));
+        sts32(b_ldg_reg[i], b_sts_addr[write_ping] + i * 32 * sizeof(float));
       }
 
       from_a += 8;
       from_b += 8 * n;
 
-      aptr_base ^= 0x2000;
-      bptr_base ^= 0x1000;
-      a_sts_addr ^= 0x2000;
-      b_sts_addr ^= 0x1000;
-    } else {
-      aptr_base ^= 0x2000;
-      bptr_base ^= 0x1000;
+      write_ping ^= 1;
     }
 
-    // calc
+    // calc from read_ping buffer
 #pragma unroll
     for (int subk = 0; subk < 8; ++subk) {
       lds128(panelA[0], panelA[1], panelA[2], panelA[3],
-             aptr_base + (subk * SMEM_LDA) * sizeof(float));
+             aptr_base[read_ping] + (subk * SMEM_LDA) * sizeof(float));
       lds128(panelA[4], panelA[5], panelA[6], panelA[7],
-             aptr_base + (subk * SMEM_LDA + 64) * sizeof(float));
+             aptr_base[read_ping] + (subk * SMEM_LDA + 64) * sizeof(float));
 
       lds128(panelB[0], panelB[1], panelB[2], panelB[3],
-             bptr_base + (subk * SMEM_LDB) * sizeof(float));
+             bptr_base[read_ping] + (subk * SMEM_LDB) * sizeof(float));
       lds128(panelB[4], panelB[5], panelB[6], panelB[7],
-             bptr_base + (subk * SMEM_LDB + 64) * sizeof(float));
+             bptr_base[read_ping] + (subk * SMEM_LDB + 64) * sizeof(float));
 
 #pragma unroll
       for (int i = 0; i < 8; ++i) {
@@ -202,9 +191,10 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
         }
       }
     }
+    read_ping ^= 1;
   }
 
-#if 1
+#if 0
   uint32_t c_sts_addr = smem_u32addr(reinterpret_cast<float *>(smem) +
                                      ((threadIdx.x / 16) * 4 * SMEM_LDC) +
                                      (threadIdx.x % 16) * 4);
@@ -217,8 +207,6 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
   for (int i = 0; i < 2; ++i) {
 #pragma unroll
     for (int j = 0; j < 2; ++j) {
-
-      __syncthreads();
 
 #pragma unroll
       for (int p = 0; p < 4; ++p) {
@@ -240,25 +228,27 @@ __global__ __launch_bounds__(256, 2) void sgemm_128x128x8(int m, int n, int k,
   }
 
 #else
-
+  __syncthreads();
   int write_offset = (blockIdx.y * 128 + (threadIdx.x / 16) * 4) * n +
                      blockIdx.x * 128 + (threadIdx.x % 16) * 4;
+
 #pragma unroll
   for (int i = 0; i < 4; ++i) {
-    stg128(sum[i][0], sum[i][1], sum[i][2], sum[i][3],
-           c + write_offset + i * n);
-    stg128(sum[i][4], sum[i][5], sum[i][6], sum[i][7],
-           c + write_offset + i * n + 64);
-    stg128(sum[i + 4][0], sum[i + 4][1], sum[i + 4][2], sum[i + 4][3],
-           c + write_offset + (i + 64) * n);
-    stg128(sum[i + 4][4], sum[i + 4][5], sum[i + 4][6], sum[i + 4][7],
-           c + write_offset + (i + 64) * n + 64);
+    for (int j = 0; j < 4; ++j) {
+      c[write_offset + i * n + j] = sum[i][j];
+      c[write_offset + i * n + j + 64] = sum[i][j + 4];
+      c[write_offset + (i + 64) * n + j] = sum[i + 4][j];
+      c[write_offset + (i + 64) * n + j + 64] = sum[i + 4][j + 4];
+    }
   }
+
 #endif
 }
 
 #undef SMEM_LDA
 #undef SMEM_LDB
+#undef ASIZE
+#undef BSIZE
 
 void MY_MMult(cublasHandle_t handle, int m, int n, int k, float *d_A, int lda,
               float *d_B, int ldb, float *d_C, int ldc) {

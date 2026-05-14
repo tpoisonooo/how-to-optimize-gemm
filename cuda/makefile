@@ -1,21 +1,21 @@
 OLD  := MMult_cuBLAS_1
 #NEW  := MMult_cuBLAS_1
-NEW := MMult_cuda_3
-SMS ?= 70 75 80 86
+NEW := MMult_cuda_11
+SMS ?= 70 75 80 86 90
 
 #
 # sample makefile
 #
 
 CUDA_PATH  ?= /usr/local/cuda
-OPENBLAS_PATH ?= /home/khj/miniconda3/pkgs/openblas-0.3.31-pthreads_h6ec200e_0
-CC         := nvcc 
+OPENBLAS_PATH ?= /usr
+CC         := nvcc
 LINKER     := $(CC)
 #CFLAGS     := -O0 -g -Wall
 $(foreach sm,$(SMS),$(eval GENCODE_FLAGS += -gencode arch=compute_$(sm),code=sm_$(sm)))
 # CFLAGS     := -std=c++17 -O0 -g -G
-CFLAGS     := -std=c++17 -O2 -I$(CUDA_PATH)/include -I$(OPENBLAS_PATH)/include
-LDFLAGS    := -L$(CUDA_PATH)/lib64 -L$(OPENBLAS_PATH)/lib -lm -lcublas -lopenblas
+CFLAGS     := -std=c++17 -O2 -I$(CUDA_PATH)/include -I$(OPENBLAS_PATH)/include/x86_64-linux-gnu -I$(OPENBLAS_PATH)/include/x86_64-linux-gnu/openblas-pthread
+LDFLAGS    := -L$(CUDA_PATH)/lib64 -L$(OPENBLAS_PATH)/lib/x86_64-linux-gnu -L$(OPENBLAS_PATH)/lib/x86_64-linux-gnu/openblas-pthread -lm -lcublas -lopenblas
 
 UTIL       := copy_matrix.o \
               compare_matrices.o \
